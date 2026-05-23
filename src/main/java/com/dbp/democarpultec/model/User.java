@@ -1,5 +1,7 @@
 package com.dbp.democarpultec.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.dbp.democarpultec.model.enums.Carreras;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -16,9 +18,9 @@ import java.util.List;
 @Builder
 @Entity
 @Table(name = "users")
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class User {
 
-    //coment prueba
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

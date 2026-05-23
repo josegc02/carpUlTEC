@@ -1,5 +1,7 @@
 package com.dbp.democarpultec.model;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -13,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Entity
+@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 public class Publication {
 
     @Id
@@ -52,6 +55,7 @@ public class Publication {
     private User author;
 
     // Una publicación puede tener muchas solicitudes
+    @Builder.Default
     @OneToMany(mappedBy = "publication", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RequestPublication> requests = new ArrayList<>();
 
