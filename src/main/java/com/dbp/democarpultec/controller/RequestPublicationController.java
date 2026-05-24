@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -34,58 +35,58 @@ public class RequestPublicationController {
 
     @PatchMapping("/{id}/cancel")
     public RequestPublicationResponseDto cancel(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return requestPublicationService.cancel(id, currentUser.getId());
     }
 
     @PatchMapping("/{id}/reject")
     public RequestPublicationResponseDto reject(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return requestPublicationService.reject(id, currentUser.getId());
     }
 
     @PatchMapping("/{id}/accept")
     public RequestPublicationResponseDto accept(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id,
             @Valid @RequestBody RequestPublicationAcceptRequestDto acceptRequest
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return requestPublicationService.accept(id, currentUser.getId(), acceptRequest.getVehicleId());
     }
 
     @PostMapping
     public ResponseEntity<RequestPublicationResponseDto> create(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @Valid @RequestBody RequestPublicationRequestDto requestPublication
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(requestPublicationService.createAuthenticated(currentUser.getId(), requestPublication));
     }
 
     @PutMapping("/{id}")
     public RequestPublicationResponseDto update(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id,
             @Valid @RequestBody RequestPublicationRequestDto requestPublication
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return requestPublicationService.updateAuthenticated(id, currentUser.getId(), requestPublication);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         requestPublicationService.deleteAuthenticated(id, currentUser.getId());
         return ResponseEntity.noContent().build();
     }

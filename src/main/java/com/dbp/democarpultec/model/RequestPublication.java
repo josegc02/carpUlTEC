@@ -23,12 +23,12 @@ public class RequestPublication {
     private Long id;
 
     // Publicación a la que se está respondiendo
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "publication_id", nullable = false)
     private Publication publication;
 
     // Usuario que hace la solicitud/propuesta
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "requester_id", nullable = false)
     private User requester;
 

@@ -75,6 +75,7 @@ public class UserService {
                 .career(user.getCareer())
                 .cycle(user.getCycle())
                 .rating(user.getRating())
+                .role(user.getRole())
                 .build();
     }
 }

@@ -13,5 +13,6 @@ public class AuthResponseDto {
 
     private String tokenType;
     private String accessToken;
+    private String refreshToken;
     private UserResponseDto user;
 }

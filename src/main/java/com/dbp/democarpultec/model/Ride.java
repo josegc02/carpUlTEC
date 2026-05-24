@@ -23,17 +23,17 @@ public class Ride {
     private Long id;
 
     // Publicación que originó este viaje
-    @OneToOne(optional = false)
+    @OneToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "publication_id", nullable = false, unique = true)
     private Publication publication;
 
     // Usuario conductor del viaje confirmado
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id", nullable = false)
     private User driver;
 
     // Vehículo usado para el viaje
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id", nullable = false)
     private Vehicle vehicle;
 
@@ -52,12 +52,12 @@ public class Ride {
 
     // Pasajeros confirmados del ride
     @Builder.Default
-    @OneToMany(mappedBy = "ride", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RidePassenger> passengers = new ArrayList<>();
 
     // Reviews asociadas al ride
     @Builder.Default
-    @OneToMany(mappedBy = "ride", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
 
 }

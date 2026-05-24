@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,11 +30,14 @@ public class PublicationRequestDto {
     private Integer seats;
 
     @NotBlank
+    @Size(max = 120)
     private String titulo;
 
+    @Size(max = 500)
     private String descripcion;
 
     @NotBlank
+    @Size(max = 120)
     private String destinationOrOrigin;
 
     @DecimalMin(value = "-90.0")

@@ -31,19 +31,19 @@ public class Review {
 
     // Ride donde ocurrió la interacción
     @NotNull
-    @ManyToOne(optional = false) //muchas reviews para un solo ride
+    @ManyToOne(optional = false, fetch = FetchType.LAZY) //muchas reviews para un solo ride
     @JoinColumn(name = "ride_id", nullable = false)
     private Ride ride;
 
     // Usuario que califica
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewer_id", nullable = false)
     private User reviewer;
 
     // Usuario calificado
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_id", nullable = false)
     private User reviewed;
 

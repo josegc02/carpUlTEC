@@ -2,6 +2,7 @@ package com.dbp.democarpultec.service;
 
 import com.dbp.democarpultec.dto.RequestPublicationRequestDto;
 import com.dbp.democarpultec.dto.RequestPublicationResponseDto;
+import com.dbp.democarpultec.event.RequestStatusChangedEvent;
 import com.dbp.democarpultec.exception.BusinessRuleException;
 import com.dbp.democarpultec.exception.DuplicateResourceException;
 import com.dbp.democarpultec.exception.ForbiddenException;
@@ -17,6 +18,7 @@ import com.dbp.democarpultec.repository.RideRepository;
 import com.dbp.democarpultec.repository.RequestPublicationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,7 @@ public class RequestPublicationService {
     private final UserService userService;
     private final VehicleService vehicleService;
     private final GeoService geoService;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public List<RequestPublicationResponseDto> findAll() {
         return requestPublicationRepository.findAll().stream().map(this::toResponseDto).toList();
@@ -117,7 +120,9 @@ public class RequestPublicationService {
         ensurePendingStatus(request);
 
         request.setStatus(Status.REJECTED);
-        return toResponseDto(requestPublicationRepository.save(request));
+        RequestPublication saved = requestPublicationRepository.save(request);
+        publishStatusChanged(saved, saved.getRequester());
+        return toResponseDto(saved);
     }
 
     public RequestPublicationResponseDto cancel(Long requestId, Long authenticatedUserId) {
@@ -126,7 +131,9 @@ public class RequestPublicationService {
         ensurePendingStatus(request);
 
         request.setStatus(Status.CANCELLED);
-        return toResponseDto(requestPublicationRepository.save(request));
+        RequestPublication saved = requestPublicationRepository.save(request);
+        publishStatusChanged(saved, saved.getPublication().getAuthor());
+        return toResponseDto(saved);
     }
 
     @Transactional
@@ -165,7 +172,9 @@ public class RequestPublicationService {
         }
 
         request.setStatus(Status.ACCEPTED);
-        return toResponseDto(requestPublicationRepository.save(request));
+        RequestPublication saved = requestPublicationRepository.save(request);
+        publishStatusChanged(saved, saved.getRequester());
+        return toResponseDto(saved);
     }
 
     private void updateEntity(RequestPublication request, RequestPublicationRequestDto dto) {
@@ -310,8 +319,21 @@ public class RequestPublicationService {
         List<RequestPublication> pendingRequests = requestPublicationRepository.findByPublication_IdAndStatus(publicationId, Status.PENDING);
         pendingRequests.stream()
                 .filter(item -> !item.getId().equals(acceptedRequestId))
-                .forEach(item -> item.setStatus(Status.REJECTED));
+                .forEach(item -> {
+                    item.setStatus(Status.REJECTED);
+                    publishStatusChanged(item, item.getRequester());
+                });
         requestPublicationRepository.saveAll(pendingRequests);
+    }
+
+    private void publishStatusChanged(RequestPublication request, User recipient) {
+        applicationEventPublisher.publishEvent(new RequestStatusChangedEvent(
+                request.getId(),
+                recipient == null ? null : recipient.getEmail(),
+                recipient == null ? null : recipient.getName(),
+                request.getPublication().getTitulo(),
+                request.getStatus()
+        ));
     }
 
     private void validateCoordinatePair(Double latitude, Double longitude, String resourceName) {

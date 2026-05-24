@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -199,14 +201,14 @@ public class UserControllerTest {
 
     @Test
     void shouldReturnAuthenticatedUserWhenTokenIsValid() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildResponse());
+        when(authService.getCurrentUserByEmail("juan@test.com")).thenReturn(buildResponse());
 
         mockMvc.perform(get("/api/users/me")
-                        .header("Authorization", "Bearer token123"))
+                        .principal(() -> "juan@test.com"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("juan@test.com"));
 
-        verify(authService).getCurrentUser("Bearer token123");
+        verify(authService).getCurrentUserByEmail("juan@test.com");
     }
 }

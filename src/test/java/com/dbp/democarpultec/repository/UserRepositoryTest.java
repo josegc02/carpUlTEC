@@ -1,5 +1,6 @@
 package com.dbp.democarpultec.repository;
 
+import com.dbp.democarpultec.PostgresContainerTest;
 import com.dbp.democarpultec.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
@@ -15,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-class UserRepositoryTest {
+class UserRepositoryTest extends PostgresContainerTest {
 
     @Autowired
     private UserRepository userRepository;

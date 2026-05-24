@@ -54,16 +54,16 @@ public class Publication {
     @Column(nullable = false)
     private LocalDateTime departureTime;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
     // Una publicación puede tener muchas solicitudes
     @Builder.Default
-    @OneToMany(mappedBy = "publication", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "publication", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RequestPublication> requests = new ArrayList<>();
 
     // Una publicación puede terminar generando un ride
-    @OneToOne(mappedBy = "publication", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "publication", fetch = FetchType.EAGER, cascade = CascadeType.ALL)
     private Ride ride;
 }

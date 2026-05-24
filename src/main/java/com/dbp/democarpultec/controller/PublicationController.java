@@ -14,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -37,20 +38,20 @@ public class PublicationController {
 
     @GetMapping("/{publicationId}/requests")
     public List<RequestPublicationResponseDto> findRequestsByPublication(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long publicationId
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return requestPublicationService.findByPublication(publicationId, currentUser.getId());
     }
 
     @PostMapping("/{publicationId}/requests")
     public ResponseEntity<RequestPublicationResponseDto> createRequestForPublication(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long publicationId,
             @Valid @RequestBody RequestPublicationRequestDto requestPublication
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         RequestPublicationResponseDto response = requestPublicationService.createForPublication(
                 publicationId,
                 currentUser.getId(),
@@ -61,30 +62,30 @@ public class PublicationController {
 
     @PostMapping
     public ResponseEntity<PublicationResponseDto> create(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @Valid @RequestBody PublicationRequestDto publication
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(publicationService.createAuthenticated(currentUser.getId(), publication));
     }
 
     @PutMapping("/{id}")
     public PublicationResponseDto update(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id,
             @Valid @RequestBody PublicationRequestDto publication
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         return publicationService.updateAuthenticated(id, currentUser.getId(), publication);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
-            @RequestHeader(value = "Authorization", required = false) String authorization,
+            Principal principal,
             @PathVariable Long id
     ) {
-        UserResponseDto currentUser = authService.getCurrentUser(authorization);
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
         publicationService.deleteAuthenticated(id, currentUser.getId());
         return ResponseEntity.noContent().build();
     }

@@ -3,6 +3,7 @@ package com.dbp.democarpultec.controller;
 import com.dbp.democarpultec.dto.AuthLoginRequestDto;
 import com.dbp.democarpultec.dto.AuthRegisterRequestDto;
 import com.dbp.democarpultec.dto.AuthResponseDto;
+import com.dbp.democarpultec.dto.RefreshTokenRequestDto;
 import com.dbp.democarpultec.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,5 +26,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDto> login(@Valid @RequestBody AuthLoginRequestDto request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponseDto> refresh(@Valid @RequestBody RefreshTokenRequestDto request) {
+        return ResponseEntity.ok(authService.refresh(request));
     }
 }

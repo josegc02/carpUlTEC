@@ -2,6 +2,7 @@ package com.dbp.democarpultec.service;
 
 import com.dbp.democarpultec.dto.RequestPublicationRequestDto;
 import com.dbp.democarpultec.dto.RequestPublicationResponseDto;
+import com.dbp.democarpultec.event.RequestStatusChangedEvent;
 import com.dbp.democarpultec.exception.BusinessRuleException;
 import com.dbp.democarpultec.exception.DuplicateResourceException;
 import com.dbp.democarpultec.exception.ForbiddenException;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -51,6 +53,9 @@ public class RequestPublicationServiceTest {
 
     @Mock
     private GeoService geoService;
+
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private RequestPublicationService requestPublicationService;
@@ -418,6 +423,7 @@ public class RequestPublicationServiceTest {
         RequestPublicationResponseDto result = requestPublicationService.cancel(5L, 2L);
 
         assertEquals(Status.CANCELLED, result.getStatus());
+        verify(applicationEventPublisher).publishEvent(any(RequestStatusChangedEvent.class));
     }
 
     @Test
@@ -445,6 +451,7 @@ public class RequestPublicationServiceTest {
         RequestPublicationResponseDto result = requestPublicationService.reject(5L, 1L);
 
         assertEquals(Status.REJECTED, result.getStatus());
+        verify(applicationEventPublisher).publishEvent(any(RequestStatusChangedEvent.class));
     }
 
     @Test
@@ -512,6 +519,7 @@ public class RequestPublicationServiceTest {
 
         assertEquals(Status.ACCEPTED, result.getStatus());
         verify(ridePassengerRepository).save(any(RidePassenger.class));
+        verify(applicationEventPublisher).publishEvent(any(RequestStatusChangedEvent.class));
     }
 
     @Test
@@ -645,5 +653,6 @@ public class RequestPublicationServiceTest {
 
         assertEquals(Status.ACCEPTED, result.getStatus());
         assertEquals(Status.REJECTED, anotherPending.getStatus());
+        verify(applicationEventPublisher, times(2)).publishEvent(any(RequestStatusChangedEvent.class));
     }
 }

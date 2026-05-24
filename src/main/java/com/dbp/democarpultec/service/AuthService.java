@@ -3,16 +3,17 @@ package com.dbp.democarpultec.service;
 import com.dbp.democarpultec.dto.AuthLoginRequestDto;
 import com.dbp.democarpultec.dto.AuthRegisterRequestDto;
 import com.dbp.democarpultec.dto.AuthResponseDto;
+import com.dbp.democarpultec.dto.RefreshTokenRequestDto;
 import com.dbp.democarpultec.dto.UserResponseDto;
 import com.dbp.democarpultec.event.UserRegisteredEvent;
 import com.dbp.democarpultec.exception.BusinessRuleException;
 import com.dbp.democarpultec.exception.DuplicateResourceException;
 import com.dbp.democarpultec.exception.UnauthorizedException;
 import com.dbp.democarpultec.model.User;
+import com.dbp.democarpultec.model.enums.Role;
 import com.dbp.democarpultec.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +23,12 @@ import java.util.Locale;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final String BEARER_PREFIX = "Bearer ";
     private static final String UTEC_DOMAIN = "@utec.edu.pe";
 
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final ApplicationEventPublisher applicationEventPublisher;
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     public AuthResponseDto register(AuthRegisterRequestDto dto) {
         String normalizedEmail = normalizeEmail(dto.getEmail());
@@ -47,6 +47,7 @@ public class AuthService {
                 .studentCode(dto.getStudentCode())
                 .career(dto.getCareer())
                 .cycle(dto.getCycle())
+                .role(Role.USER)
                 .build();
 
         User saved = userRepository.save(user);
@@ -70,13 +71,17 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
-    public UserResponseDto getCurrentUser(String authHeader) {
-        String token = extractBearerToken(authHeader);
-        if (!jwtService.isTokenValid(token)) {
-            throw new UnauthorizedException("Invalid or expired token");
+    public AuthResponseDto refresh(RefreshTokenRequestDto dto) {
+        if (!jwtService.isRefreshTokenValid(dto.getRefreshToken())) {
+            throw new UnauthorizedException("Invalid refresh token");
         }
 
-        String email = jwtService.extractEmail(token);
+        User user = userRepository.findByEmail(normalizeEmail(jwtService.extractEmail(dto.getRefreshToken())))
+                .orElseThrow(() -> new UnauthorizedException("Invalid refresh token"));
+        return buildAuthResponse(user);
+    }
+
+    public UserResponseDto getCurrentUserByEmail(String email) {
         User user = userRepository.findByEmail(normalizeEmail(email))
                 .orElseThrow(() -> new UnauthorizedException("Authenticated user not found"));
 
@@ -86,7 +91,8 @@ public class AuthService {
     private AuthResponseDto buildAuthResponse(User user) {
         return AuthResponseDto.builder()
                 .tokenType("Bearer")
-                .accessToken(jwtService.generateToken(user.getEmail()))
+                .accessToken(jwtService.generateToken(user))
+                .refreshToken(jwtService.generateRefreshToken(user))
                 .user(toResponseDto(user))
                 .build();
     }
@@ -101,17 +107,6 @@ public class AuthService {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
-    private String extractBearerToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-            throw new UnauthorizedException("Missing bearer token");
-        }
-        String token = authHeader.substring(BEARER_PREFIX.length()).trim();
-        if (token.isEmpty()) {
-            throw new UnauthorizedException("Missing bearer token");
-        }
-        return token;
-    }
-
     private UserResponseDto toResponseDto(User user) {
         return UserResponseDto.builder()
                 .id(user.getId())
@@ -123,6 +118,7 @@ public class AuthService {
                 .career(user.getCareer())
                 .cycle(user.getCycle())
                 .rating(user.getRating())
+                .role(user.getRole())
                 .build();
     }
 }

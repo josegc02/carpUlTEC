@@ -13,6 +13,7 @@ import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(RequestPublicationController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class RequestPublicationControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -130,11 +132,11 @@ public class RequestPublicationControllerTest {
 
     @Test
     void shouldCreateRequestPublicationWhenValidRequest() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.createAuthenticated(eq(2L), any(RequestPublicationRequestDto.class))).thenReturn(buildResponse());
 
         mockMvc.perform(post("/api/request-publications")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(buildRequest())))
                 .andExpect(status().isCreated())
@@ -155,7 +157,7 @@ public class RequestPublicationControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/request-publications")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalid)))
                 .andExpect(status().isBadRequest());
@@ -170,7 +172,7 @@ public class RequestPublicationControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/request-publications")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalid)))
                 .andExpect(status().isBadRequest());
@@ -192,7 +194,7 @@ public class RequestPublicationControllerTest {
                 .createdAt(createdAt)
                 .build();
 
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.updateAuthenticated(eq(1L), eq(2L), any(RequestPublicationRequestDto.class))).thenReturn(updated);
 
         RequestPublicationRequestDto req = RequestPublicationRequestDto.builder()
@@ -205,7 +207,7 @@ public class RequestPublicationControllerTest {
                 .build();
 
         mockMvc.perform(put("/api/request-publications/1")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
@@ -218,11 +220,11 @@ public class RequestPublicationControllerTest {
 
     @Test
     void shouldReturn404WhenUpdatingNonExistentRequestPublication() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.updateAuthenticated(eq(99L), eq(2L), any(RequestPublicationRequestDto.class))).thenThrow(new EntityNotFoundException("RequestPublication not found with id 99"));
 
         mockMvc.perform(put("/api/request-publications/99")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(buildRequest())))
                 .andExpect(status().isNotFound());
@@ -232,11 +234,11 @@ public class RequestPublicationControllerTest {
 
     @Test
     void shouldDeleteRequestPublicationWhenIdExists() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         doNothing().when(requestPublicationService).deleteAuthenticated(1L, 2L);
 
         mockMvc.perform(delete("/api/request-publications/1")
-                        .header("Authorization", "Bearer token123"))
+                        .principal(() -> "carlos@utec.edu.pe"))
                 .andExpect(status().isNoContent());
 
         verify(requestPublicationService).deleteAuthenticated(1L, 2L);
@@ -244,11 +246,11 @@ public class RequestPublicationControllerTest {
 
     @Test
     void shouldReturn404WhenDeletingNonExistentRequestPublication() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         doThrow(new EntityNotFoundException("RequestPublication not found with id 99")).when(requestPublicationService).deleteAuthenticated(99L, 2L);
 
         mockMvc.perform(delete("/api/request-publications/99")
-                        .header("Authorization", "Bearer token123"))
+                        .principal(() -> "carlos@utec.edu.pe"))
                 .andExpect(status().isNotFound());
 
         verify(requestPublicationService).deleteAuthenticated(99L, 2L);
@@ -259,11 +261,11 @@ public class RequestPublicationControllerTest {
         RequestPublicationResponseDto cancelled = buildResponse();
         cancelled.setStatus(Status.CANCELLED);
 
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.cancel(1L, 2L)).thenReturn(cancelled);
 
         mockMvc.perform(patch("/api/request-publications/1/cancel")
-                        .header("Authorization", "Bearer token123"))
+                        .principal(() -> "carlos@utec.edu.pe"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
@@ -273,23 +275,23 @@ public class RequestPublicationControllerTest {
         RequestPublicationResponseDto rejected = buildResponse();
         rejected.setStatus(Status.REJECTED);
 
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.reject(1L, 2L)).thenReturn(rejected);
 
         mockMvc.perform(patch("/api/request-publications/1/reject")
-                        .header("Authorization", "Bearer token123"))
+                        .principal(() -> "carlos@utec.edu.pe"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"));
     }
 
     @Test
     void shouldReturnForbiddenWhenRejectingRequestOwnedByAnotherAuthor() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.reject(1L, 2L))
                 .thenThrow(new ForbiddenException("You are not the owner of this publication"));
 
         mockMvc.perform(patch("/api/request-publications/1/reject")
-                        .header("Authorization", "Bearer token123"))
+                        .principal(() -> "carlos@utec.edu.pe"))
                 .andExpect(status().isForbidden());
     }
 
@@ -298,11 +300,11 @@ public class RequestPublicationControllerTest {
         RequestPublicationResponseDto accepted = buildResponse();
         accepted.setStatus(Status.ACCEPTED);
 
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.accept(1L, 2L, 7L)).thenReturn(accepted);
 
         mockMvc.perform(patch("/api/request-publications/1/accept")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -317,10 +319,10 @@ public class RequestPublicationControllerTest {
 
     @Test
     void shouldReturn400WhenAcceptRequestDoesNotIncludeVehicleId() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
 
         mockMvc.perform(patch("/api/request-publications/1/accept")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest());
@@ -330,12 +332,12 @@ public class RequestPublicationControllerTest {
 
     @Test
     void shouldReturnForbiddenWhenAcceptingRequestOwnedByAnotherAuthor() throws Exception {
-        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildCurrentUser());
+        when(authService.getCurrentUserByEmail("carlos@utec.edu.pe")).thenReturn(buildCurrentUser());
         when(requestPublicationService.accept(1L, 2L, 7L))
                 .thenThrow(new ForbiddenException("You are not the owner of this publication"));
 
         mockMvc.perform(patch("/api/request-publications/1/accept")
-                        .header("Authorization", "Bearer token123")
+                        .principal(() -> "carlos@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
