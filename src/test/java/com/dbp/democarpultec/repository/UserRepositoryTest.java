@@ -1,92 +1,251 @@
 package com.dbp.democarpultec.repository;
 
 import com.dbp.democarpultec.model.User;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import com.dbp.democarpultec.model.enums.Carreras;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@ActiveProfiles("test")
-class UserRepositoryTest {
-
+class UserRepositoryTest extends BaseRepositoryTest {
     @Autowired
     private UserRepository userRepository;
 
+    private User user;
+
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+
+        user = User.builder()
+                .name("Juan")
+                .lastName("Perez")
+                .email("juan.perez@utec.edu.pe")
+                .phone("111111111")
+                .studentCode("202410001")
+                .career(Carreras.Ciencia_de_la_Computacion)
+                .cycle(5)
+                .rating(4.5)
+                .build();
+    }
+
     @Test
     void shouldSaveUserWhenValidData() {
-        User user = new User();
-        user.setName("Juan");
-        user.setLastName("Perez");
-        user.setEmail("juan@test.com");
+        User saved = userRepository.save(user);
 
-        User savedUser = userRepository.save(user);
-
-        assertNotNull(savedUser.getId());
-        assertEquals("Juan", savedUser.getName());
+        assertNotNull(saved.getId());
+        assertEquals("Juan", saved.getName());
+        assertEquals("Perez", saved.getLastName());
+        assertEquals("juan.perez@utec.edu.pe", saved.getEmail());
     }
 
     @Test
-    void shouldFindUserByIdWhenUserExists() {
-        User user = new User();
-        user.setName("Carlos");
-        user.setLastName("lopez");
-        user.setEmail("carlos@test.com");
+    void shouldGenerateIdAutomaticallyWhenUserIsSaved() {
+        User saved = userRepository.save(user);
 
-        User savedUser = userRepository.save(user);
+        assertNotNull(saved.getId());
+        assertTrue(saved.getId() > 0);
+    }
 
-        Optional<User> result = userRepository.findById(savedUser.getId());
+    @Test
+    void shouldReturnUserWhenIdExists() {
+        User saved = userRepository.save(user);
+
+        Optional<User> result = userRepository.findById(saved.getId());
 
         assertTrue(result.isPresent());
-        assertEquals("Carlos", result.get().getName());
+        assertEquals("Juan", result.get().getName());
+        assertEquals("Perez", result.get().getLastName());
+        assertEquals("juan.perez@utec.edu.pe", result.get().getEmail());
     }
 
     @Test
-    void shouldReturnAllUsers(){
-        User user1 = new User();
-        user1.setName("Juan");
-        user1.setLastName("Perez");
-        user1.setEmail("juan@test.com");
+    void shouldReturnEmptyWhenIdDoesNotExist() {
+        Optional<User> result = userRepository.findById(999L);
 
-        User user2 = new User();
-        user2.setName("Carlos");
-        user2.setLastName("Lopez");
-        user2.setEmail("maria@test.com");
-
-        userRepository.save(user1);
-        userRepository.save(user2);
-
-        List<User> user = userRepository.findAll();
-
-        assertEquals(2, user.size());
+        assertFalse(result.isPresent());
     }
 
     @Test
-    void shouldDeleteUserWhenUserExists() {
-        User user = new User();
-        user.setName("Pedro");
-        user.setLastName("Diaz");
-        user.setEmail("pedro@test.com");
+    void shouldReturnUserWhenEmailExists() {
+        userRepository.save(user);
 
-        User savedUser = userRepository.save(user);
+        Optional<User> result = userRepository.findByEmail("juan.perez@utec.edu.pe");
 
-        userRepository.deleteById(savedUser.getId());
+        assertTrue(result.isPresent());
+        assertEquals("Juan", result.get().getName());
+        assertEquals("Perez", result.get().getLastName());
+        assertEquals("juan.perez@utec.edu.pe", result.get().getEmail());
+    }
 
-        Optional<User> result = userRepository.findById(savedUser.getId());
+    @Test
+    void shouldReturnEmptyWhenEmailDoesNotExist() {
+        Optional<User> result = userRepository.findByEmail("noexiste@utec.edu.pe");
+
+        assertFalse(result.isPresent());
+    }
+
+    @Test
+    void shouldReturnCorrectUserWhenMultipleUsersExistAndEmailMatches() {
+        userRepository.save(user);
+        userRepository.save(User.builder()
+                .name("Ana")
+                .lastName("Lopez")
+                .email("ana.lopez@utec.edu.pe")
+                .phone("222222222")
+                .studentCode("202410002")
+                .career(Carreras.Ciencia_de_Datos)
+                .cycle(4)
+                .rating(4.0)
+                .build());
+
+        Optional<User> result = userRepository.findByEmail("ana.lopez@utec.edu.pe");
+
+        assertTrue(result.isPresent());
+        assertEquals("Ana", result.get().getName());
+    }
+
+    @Test
+    void shouldReturnAllUsersWhenMultipleUsersExist() {
+        userRepository.save(user);
+        userRepository.save(User.builder()
+                .name("Ana")
+                .lastName("Lopez")
+                .email("ana.lopez@utec.edu.pe")
+                .phone("222222222")
+                .studentCode("202410002")
+                .career(Carreras.Ciencia_de_Datos)
+                .cycle(4)
+                .rating(4.0)
+                .build());
+
+        List<User> result = userRepository.findAll();
+
+        assertEquals(2, result.size());
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoUsersExist() {
+        List<User> result = userRepository.findAll();
 
         assertTrue(result.isEmpty());
     }
 
     @Test
+    void shouldUpdateUserWhenUserExists() {
+        User saved = userRepository.save(user);
+
+        saved.setName("Pedro");
+        saved.setLastName("Garcia");
+        saved.setEmail("pedro.garcia@utec.edu.pe");
+        User updated = userRepository.save(saved);
+
+        assertEquals("Pedro", updated.getName());
+        assertEquals("Garcia", updated.getLastName());
+        assertEquals("pedro.garcia@utec.edu.pe", updated.getEmail());
+        assertEquals(saved.getId(), updated.getId());
+    }
+
+    @Test
+    void shouldDeleteUserWhenUserExists() {
+        User saved = userRepository.save(user);
+        Long id = saved.getId();
+
+        userRepository.deleteById(id);
+
+        assertFalse(userRepository.findById(id).isPresent());
+    }
+
+    @Test
+    void shouldNotFailWhenDeletingAllUsers() {
+        userRepository.save(user);
+        userRepository.save(User.builder()
+                .name("Ana")
+                .lastName("Lopez")
+                .email("ana.lopez@utec.edu.pe")
+                .phone("222222222")
+                .studentCode("202410002")
+                .career(Carreras.Ciencia_de_Datos)
+                .cycle(4)
+                .rating(4.0)
+                .build());
+
+        userRepository.deleteAll();
+
+        assertEquals(0, userRepository.count());
+    }
+
+    @Test
+    void shouldReturnTrueWhenUserExists() {
+        User saved = userRepository.save(user);
+
+        assertTrue(userRepository.existsById(saved.getId()));
+    }
+
+    @Test
     void shouldReturnFalseWhenUserDoesNotExist() {
-        boolean exists = userRepository.existsById(999L);
-        assertFalse(exists);
+        assertFalse(userRepository.existsById(999L));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenEmailIsDuplicated() {
+        userRepository.save(user);
+        User duplicate = User.builder()
+                .name("Pedro")
+                .lastName("Garcia")
+                .email("juan.perez@utec.edu.pe")
+                .phone("333333333")
+                .studentCode("202410003")
+                .build();
+
+        assertThrows(Exception.class, () -> userRepository.saveAndFlush(duplicate));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenPhoneIsDuplicated() {
+        userRepository.save(user);
+        User duplicate = User.builder()
+                .name("Pedro")
+                .lastName("Garcia")
+                .email("pedro.garcia@utec.edu.pe")
+                .phone("111111111")
+                .studentCode("202410003")
+                .build();
+
+        assertThrows(Exception.class, () -> userRepository.saveAndFlush(duplicate));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenStudentCodeIsDuplicated() {
+        userRepository.save(user);
+        User duplicate = User.builder()
+                .name("Pedro")
+                .lastName("Garcia")
+                .email("pedro.garcia@utec.edu.pe")
+                .phone("333333333")
+                .studentCode("202410001")
+                .build();
+
+        assertThrows(Exception.class, () -> userRepository.saveAndFlush(duplicate));
+    }
+
+    @Test
+    void shouldReturnCorrectCountWhenUsersAreSaved() {
+        userRepository.save(user);
+        userRepository.save(User.builder()
+                .name("Ana")
+                .lastName("Lopez")
+                .email("ana.lopez@utec.edu.pe")
+                .phone("222222222")
+                .studentCode("202410002")
+                .career(Carreras.Ciencia_de_Datos)
+                .cycle(4).rating(4.0)
+                .build());
+
+        assertEquals(2, userRepository.count());
     }
 }
