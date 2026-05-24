@@ -184,14 +184,24 @@ public class RequestPublicationService {
     }
 
     private void updateEntityData(RequestPublication request, Publication publication, RequestPublicationRequestDto dto) {
-        validateCoordinatePair(dto.getExternalLatitude(), dto.getExternalLongitude(), "request publication");
+        Double latitude = dto.getExternalLatitude();
+        Double longitude = dto.getExternalLongitude();
+        validateCoordinatePair(latitude, longitude, "request publication");
+        if (latitude == null && longitude == null) {
+            GoogleMapsService.Coordinates coordinates = geoService.geocode(dto.getPickupPointOrDestine());
+            if (coordinates != null) {
+                latitude = coordinates.latitude();
+                longitude = coordinates.longitude();
+            }
+        }
+
         request.setPublication(publication);
         request.setRequesterIsDriver(dto.getRequesterIsDriver());
         request.setSeats(dto.getSeats());
         request.setMessage(dto.getMessage());
         request.setPickupPointOrDestine(dto.getPickupPointOrDestine());
-        request.setExternalLatitude(dto.getExternalLatitude());
-        request.setExternalLongitude(dto.getExternalLongitude());
+        request.setExternalLatitude(latitude);
+        request.setExternalLongitude(longitude);
     }
 
     private void validateRequesterOwnership(RequestPublication request, Long authenticatedUserId) {

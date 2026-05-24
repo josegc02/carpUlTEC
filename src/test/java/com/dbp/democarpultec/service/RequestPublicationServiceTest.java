@@ -252,6 +252,41 @@ public class RequestPublicationServiceTest {
     }
 
     @Test
+    void shouldUseGeocodedCoordinatesWhenCreatingRequestWithAddressOnly() {
+        RequestPublicationRequestDto dto = RequestPublicationRequestDto.builder()
+                .publicationId(1L)
+                .requesterId(2L)
+                .requesterIsDriver(false)
+                .seats(1)
+                .pickupPointOrDestine("San Miguel")
+                .build();
+
+        Publication publication = new Publication();
+        publication.setId(1L);
+
+        User requester = new User();
+        requester.setId(2L);
+
+        when(publicationService.findEntityById(1L)).thenReturn(publication);
+        when(userService.findEntityById(2L)).thenReturn(requester);
+        when(geoService.geocode("San Miguel"))
+                .thenReturn(new GoogleMapsService.Coordinates(-12.078, -77.09));
+        when(requestPublicationRepository.save(any(RequestPublication.class))).thenAnswer(invocation -> {
+            RequestPublication request = invocation.getArgument(0);
+            request.setId(1L);
+            request.setStatus(Status.PENDING);
+            request.setCreatedAt(LocalDateTime.now());
+            return request;
+        });
+
+        RequestPublicationResponseDto result = requestPublicationService.create(dto);
+
+        assertEquals(-12.078, result.getExternalLatitude());
+        assertEquals(-77.09, result.getExternalLongitude());
+        verify(geoService).geocode("San Miguel");
+    }
+
+    @Test
     void shouldThrowBusinessRuleWhenAuthorCreatesRequestForOwnPublication() {
         RequestPublicationRequestDto dto = RequestPublicationRequestDto.builder()
                 .publicationId(1L)

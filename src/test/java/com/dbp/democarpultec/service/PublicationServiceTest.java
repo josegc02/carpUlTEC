@@ -208,6 +208,37 @@ public class PublicationServiceTest {
     }
 
     @Test
+    void shouldUseGeocodedCoordinatesWhenCreatingPublicationWithAddressOnly() {
+        PublicationRequestDto dto = PublicationRequestDto.builder()
+                .fromUTEC(true)
+                .driverToPassenger(true)
+                .seats(2)
+                .titulo("Viaje")
+                .destinationOrOrigin("Miraflores")
+                .departureTime(LocalDateTime.now())
+                .authorId(1L)
+                .build();
+
+        User author = new User();
+        author.setId(1L);
+
+        when(userService.findEntityById(1L)).thenReturn(author);
+        when(geoService.geocode("Miraflores"))
+                .thenReturn(new GoogleMapsService.Coordinates(-12.121, -77.031));
+        when(publicationRepository.save(any(Publication.class))).thenAnswer(invocation -> {
+            Publication publication = invocation.getArgument(0);
+            publication.setId(1L);
+            return publication;
+        });
+
+        PublicationResponseDto result = publicationService.create(dto);
+
+        assertEquals(-12.121, result.getExternalLatitude());
+        assertEquals(-77.031, result.getExternalLongitude());
+        verify(geoService).geocode("Miraflores");
+    }
+
+    @Test
     void shouldThrowForbiddenWhenUpdatingPublicationOwnedByAnotherUser() {
         PublicationRequestDto dto = PublicationRequestDto.builder()
                 .fromUTEC(true)

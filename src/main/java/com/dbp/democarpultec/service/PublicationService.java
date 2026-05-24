@@ -78,15 +78,25 @@ public class PublicationService {
     }
 
     private void updateEntityData(Publication publication, PublicationRequestDto dto) {
-        validateCoordinatePair(dto.getExternalLatitude(), dto.getExternalLongitude(), "publication");
+        Double latitude = dto.getExternalLatitude();
+        Double longitude = dto.getExternalLongitude();
+        validateCoordinatePair(latitude, longitude, "publication");
+        if (latitude == null && longitude == null) {
+            GoogleMapsService.Coordinates coordinates = geoService.geocode(dto.getDestinationOrOrigin());
+            if (coordinates != null) {
+                latitude = coordinates.latitude();
+                longitude = coordinates.longitude();
+            }
+        }
+
         publication.setFromUTEC(dto.getFromUTEC());
         publication.setDriverToPassenger(dto.getDriverToPassenger());
         publication.setSeats(dto.getSeats());
         publication.setTitulo(dto.getTitulo());
         publication.setDescripcion(dto.getDescripcion());
         publication.setDestinationOrOrigin(dto.getDestinationOrOrigin());
-        publication.setExternalLatitude(dto.getExternalLatitude());
-        publication.setExternalLongitude(dto.getExternalLongitude());
+        publication.setExternalLatitude(latitude);
+        publication.setExternalLongitude(longitude);
         publication.setDepartureTime(dto.getDepartureTime());
     }
 

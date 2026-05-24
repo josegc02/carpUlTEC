@@ -9,19 +9,37 @@ public class GeoService {
 
     private final double utecLatitude;
     private final double utecLongitude;
+    private final GoogleMapsService googleMapsService;
 
     public GeoService(
             @Value("${app.utec.latitude:-12.068335}") double utecLatitude,
-            @Value("${app.utec.longitude:-77.080902}") double utecLongitude
+            @Value("${app.utec.longitude:-77.080902}") double utecLongitude,
+            GoogleMapsService googleMapsService
     ) {
         this.utecLatitude = utecLatitude;
         this.utecLongitude = utecLongitude;
+        this.googleMapsService = googleMapsService;
+    }
+
+    public GoogleMapsService.Coordinates geocode(String address) {
+        return googleMapsService.geocode(address);
     }
 
     public Double distanceToUtecKm(Double latitude, Double longitude) {
         if (latitude == null || longitude == null) {
             return null;
         }
+
+        Double drivingDistanceKm = googleMapsService.drivingDistanceKm(
+                latitude,
+                longitude,
+                utecLatitude,
+                utecLongitude
+        );
+        if (drivingDistanceKm != null) {
+            return drivingDistanceKm;
+        }
+
         return roundTo2Decimals(haversineKm(latitude, longitude, utecLatitude, utecLongitude));
     }
 
