@@ -1,6 +1,6 @@
 # CarpUlTEC
 
-CarpUlTEC es una API REST construida con Spring Boot para gestionar usuarios, vehiculos, publicaciones, viajes, pasajeros, solicitudes y resenas dentro de una aplicacion de carpooling universitario.
+esto es una prueba git add .
 
 ## Tecnologias
 
