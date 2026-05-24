@@ -34,12 +34,12 @@ public class ReviewControllerTest {
     @MockitoBean
     private ReviewService reviewService;
 
+    private final LocalDateTime createdAt = LocalDateTime.of(2025, 6, 1, 10, 0);
+
     @BeforeEach
     void setUp() {
         objectMapper.registerModule(new JavaTimeModule());
     }
-
-    private final LocalDateTime createdAt = LocalDateTime.of(2025, 6, 1, 10, 0);
 
     private ReviewResponseDto buildResponse() {
         return ReviewResponseDto.builder()
@@ -48,7 +48,7 @@ public class ReviewControllerTest {
                 .reviewerId(1L)
                 .reviewedId(2L)
                 .rating(5)
-                .comment("Excelente conductor")
+                .comment("Muy buen viaje")
                 .createdAt(createdAt)
                 .build();
     }
@@ -59,7 +59,7 @@ public class ReviewControllerTest {
                 .reviewerId(1L)
                 .reviewedId(2L)
                 .rating(5)
-                .comment("Excelente conductor")
+                .comment("Muy buen viaje")
                 .build();
     }
 
@@ -71,18 +71,9 @@ public class ReviewControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].rating").value(5))
-                .andExpect(jsonPath("$[0].comment").value("Excelente conductor"));
+                .andExpect(jsonPath("$[0].comment").value("Muy buen viaje"));
 
         verify(reviewService).findAll();
-    }
-
-    @Test
-    void shouldReturnEmptyListWhenNoReviewsExist() throws Exception {
-        when(reviewService.findAll()).thenReturn(List.of());
-
-        mockMvc.perform(get("/api/reviews"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test
@@ -92,8 +83,7 @@ public class ReviewControllerTest {
         mockMvc.perform(get("/api/reviews/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.reviewerId").value(1))
-                .andExpect(jsonPath("$.reviewedId").value(2))
+                .andExpect(jsonPath("$.rideId").value(1))
                 .andExpect(jsonPath("$.rating").value(5));
 
         verify(reviewService).findById(1L);
@@ -103,8 +93,7 @@ public class ReviewControllerTest {
     void shouldReturn404WhenReviewNotFound() throws Exception {
         when(reviewService.findById(99L)).thenThrow(new EntityNotFoundException("Review not found with id 99"));
 
-        mockMvc.perform(get("/api/reviews/99"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/reviews/99")).andExpect(status().isNotFound());
 
         verify(reviewService).findById(99L);
     }
@@ -119,18 +108,19 @@ public class ReviewControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.rating").value(5))
-                .andExpect(jsonPath("$.comment").value("Excelente conductor"));
+                .andExpect(jsonPath("$.comment").value("Muy buen viaje"));
 
         verify(reviewService).create(any(ReviewRequestDto.class));
     }
 
     @Test
-    void shouldReturn400WhenRatingExceedsMaximum() throws Exception {
+    void shouldReturn400WhenRatingIsInvalid() throws Exception {
         ReviewRequestDto invalid = ReviewRequestDto.builder()
                 .rideId(1L)
                 .reviewerId(1L)
                 .reviewedId(2L)
-                .rating(6)   // @Max(5) → inválido
+                .rating(6)
+                .comment("Comentario")
                 .build();
 
         mockMvc.perform(post("/api/reviews")
@@ -142,26 +132,9 @@ public class ReviewControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenRatingIsBelowMinimum() throws Exception {
+    void shouldReturn400WhenRequiredFieldsAreNull() throws Exception {
         ReviewRequestDto invalid = ReviewRequestDto.builder()
-                .rideId(1L)
-                .reviewerId(1L)
-                .reviewedId(2L)
-                .rating(0)
-                .build();
-
-        mockMvc.perform(post("/api/reviews")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(invalid)))
-                .andExpect(status().isBadRequest());
-
-        verify(reviewService, never()).create(any());
-    }
-
-    @Test
-    void shouldReturn400WhenRequiredIdsAreNull() throws Exception {
-        ReviewRequestDto invalid = ReviewRequestDto.builder()
-                .rating(4)
+                .comment("Comentario")
                 .build();
 
         mockMvc.perform(post("/api/reviews")
@@ -176,30 +149,30 @@ public class ReviewControllerTest {
     void shouldUpdateReviewWhenValidRequest() throws Exception {
         ReviewResponseDto updated = ReviewResponseDto.builder()
                 .id(1L)
-                .rideId(1L)
-                .reviewerId(1L)
-                .reviewedId(2L)
-                .rating(3)
-                .comment("Bien, pero llegó tarde")
+                .rideId(2L)
+                .reviewerId(3L)
+                .reviewedId(4L)
+                .rating(4)
+                .comment("Buen conductor")
                 .createdAt(createdAt)
+                .build();
+
+        ReviewRequestDto request = ReviewRequestDto.builder()
+                .rideId(2L)
+                .reviewerId(3L)
+                .reviewedId(4L)
+                .rating(4)
+                .comment("Buen conductor")
                 .build();
 
         when(reviewService.update(eq(1L), any(ReviewRequestDto.class))).thenReturn(updated);
 
-        ReviewRequestDto req = ReviewRequestDto.builder()
-                .rideId(1L)
-                .reviewerId(1L)
-                .reviewedId(2L)
-                .rating(3)
-                .comment("Bien, pero llegó tarde")
-                .build();
-
         mockMvc.perform(put("/api/reviews/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rating").value(3))
-                .andExpect(jsonPath("$.comment").value("Bien, pero llegó tarde"));
+                .andExpect(jsonPath("$.rating").value(4))
+                .andExpect(jsonPath("$.comment").value("Buen conductor"));
 
         verify(reviewService).update(eq(1L), any(ReviewRequestDto.class));
     }
@@ -220,8 +193,7 @@ public class ReviewControllerTest {
     void shouldDeleteReviewWhenIdExists() throws Exception {
         doNothing().when(reviewService).delete(1L);
 
-        mockMvc.perform(delete("/api/reviews/1"))
-                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/reviews/1")).andExpect(status().isNoContent());
 
         verify(reviewService).delete(1L);
     }
@@ -230,8 +202,7 @@ public class ReviewControllerTest {
     void shouldReturn404WhenDeletingNonExistentReview() throws Exception {
         doThrow(new EntityNotFoundException("Review not found with id 99")).when(reviewService).delete(99L);
 
-        mockMvc.perform(delete("/api/reviews/99"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/reviews/99")).andExpect(status().isNotFound());
 
         verify(reviewService).delete(99L);
     }

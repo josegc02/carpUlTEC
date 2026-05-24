@@ -5,6 +5,7 @@ import com.dbp.democarpultec.dto.RidePassengerResponseDto;
 import com.dbp.democarpultec.service.RidePassengerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -31,33 +32,35 @@ public class RidePassengerControllerTest {
     @MockitoBean
     private RidePassengerService ridePassengerService;
 
-    private RidePassengerResponseDto buildResponse() {
-        return RidePassengerResponseDto.builder()
+    private RidePassengerResponseDto response;
+    private RidePassengerRequestDto request;
+
+    @BeforeEach
+    void setUp() {
+        response = RidePassengerResponseDto.builder()
                 .id(1L)
                 .passengerId(1L)
                 .rideId(1L)
                 .seatsReserved(2)
-                .pickupPoint("Av. Larco 123")
+                .pickupPoint("San Miguel")
                 .build();
-    }
 
-    private RidePassengerRequestDto buildRequest() {
-        return RidePassengerRequestDto.builder()
+        request = RidePassengerRequestDto.builder()
                 .passengerId(1L)
                 .rideId(1L)
                 .seatsReserved(2)
-                .pickupPoint("Av. Larco 123")
+                .pickupPoint("San Miguel")
                 .build();
     }
 
     @Test
-    void shouldReturnAllRidePassengersWhenPassengersExist() throws Exception {
-        when(ridePassengerService.findAll()).thenReturn(List.of(buildResponse()));
+    void shouldReturnAllRidePassengersWhenRidePassengersExist() throws Exception {
+        when(ridePassengerService.findAll()).thenReturn(List.of(response));
 
         mockMvc.perform(get("/api/ride-passengers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].passengerId").value(1))
+                .andExpect(jsonPath("$[0].pickupPoint").value("San Miguel"))
                 .andExpect(jsonPath("$[0].seatsReserved").value(2));
 
         verify(ridePassengerService).findAll();
@@ -70,17 +73,19 @@ public class RidePassengerControllerTest {
         mockMvc.perform(get("/api/ride-passengers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+
+        verify(ridePassengerService).findAll();
     }
 
     @Test
     void shouldReturnRidePassengerWhenIdExists() throws Exception {
-        when(ridePassengerService.findById(1L)).thenReturn(buildResponse());
+        when(ridePassengerService.findById(1L)).thenReturn(response);
 
         mockMvc.perform(get("/api/ride-passengers/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.rideId").value(1))
-                .andExpect(jsonPath("$.pickupPoint").value("Av. Larco 123"));
+                .andExpect(jsonPath("$.passengerId").value(1))
+                .andExpect(jsonPath("$.rideId").value(1));
 
         verify(ridePassengerService).findById(1L);
     }
@@ -89,29 +94,28 @@ public class RidePassengerControllerTest {
     void shouldReturn404WhenRidePassengerNotFound() throws Exception {
         when(ridePassengerService.findById(99L)).thenThrow(new EntityNotFoundException("RidePassenger not found with id 99"));
 
-        mockMvc.perform(get("/api/ride-passengers/99"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/ride-passengers/99")).andExpect(status().isNotFound());
 
         verify(ridePassengerService).findById(99L);
     }
 
     @Test
     void shouldCreateRidePassengerWhenValidRequest() throws Exception {
-        when(ridePassengerService.create(any(RidePassengerRequestDto.class))).thenReturn(buildResponse());
+        when(ridePassengerService.create(any(RidePassengerRequestDto.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/ride-passengers")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(buildRequest())))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.passengerId").value(1))
+                .andExpect(jsonPath("$.pickupPoint").value("San Miguel"))
                 .andExpect(jsonPath("$.seatsReserved").value(2));
 
         verify(ridePassengerService).create(any(RidePassengerRequestDto.class));
     }
 
     @Test
-    void shouldReturn400WhenSeatsReservedIsZero() throws Exception {
+    void shouldReturn400WhenSeatsReservedIsInvalid() throws Exception {
         RidePassengerRequestDto invalid = RidePassengerRequestDto.builder()
                 .passengerId(1L)
                 .rideId(1L)
@@ -127,9 +131,9 @@ public class RidePassengerControllerTest {
     }
 
     @Test
-    void shouldReturn400WhenPassengerIdOrRideIdIsNull() throws Exception {
+    void shouldReturn400WhenRequiredFieldsAreNull() throws Exception {
         RidePassengerRequestDto invalid = RidePassengerRequestDto.builder()
-                .seatsReserved(1)
+                .pickupPoint("San Miguel")
                 .build();
 
         mockMvc.perform(post("/api/ride-passengers")
@@ -144,27 +148,27 @@ public class RidePassengerControllerTest {
     void shouldUpdateRidePassengerWhenValidRequest() throws Exception {
         RidePassengerResponseDto updated = RidePassengerResponseDto.builder()
                 .id(1L)
-                .passengerId(1L)
-                .rideId(1L)
-                .seatsReserved(3)
-                .pickupPoint("Av. Benavides 456")
+                .passengerId(2L)
+                .rideId(3L)
+                .seatsReserved(1)
+                .pickupPoint("Miraflores")
+                .build();
+
+        RidePassengerRequestDto req = RidePassengerRequestDto.builder()
+                .passengerId(2L)
+                .rideId(3L)
+                .seatsReserved(1)
+                .pickupPoint("Miraflores")
                 .build();
 
         when(ridePassengerService.update(eq(1L), any(RidePassengerRequestDto.class))).thenReturn(updated);
-
-        RidePassengerRequestDto req = RidePassengerRequestDto.builder()
-                .passengerId(1L)
-                .rideId(1L)
-                .seatsReserved(3)
-                .pickupPoint("Av. Benavides 456")
-                .build();
 
         mockMvc.perform(put("/api/ride-passengers/1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.seatsReserved").value(3))
-                .andExpect(jsonPath("$.pickupPoint").value("Av. Benavides 456"));
+                .andExpect(jsonPath("$.pickupPoint").value("Miraflores"))
+                .andExpect(jsonPath("$.seatsReserved").value(1));
 
         verify(ridePassengerService).update(eq(1L), any(RidePassengerRequestDto.class));
     }
@@ -175,7 +179,7 @@ public class RidePassengerControllerTest {
 
         mockMvc.perform(put("/api/ride-passengers/99")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(buildRequest())))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound());
 
         verify(ridePassengerService).update(eq(99L), any(RidePassengerRequestDto.class));
@@ -185,8 +189,7 @@ public class RidePassengerControllerTest {
     void shouldDeleteRidePassengerWhenIdExists() throws Exception {
         doNothing().when(ridePassengerService).delete(1L);
 
-        mockMvc.perform(delete("/api/ride-passengers/1"))
-                .andExpect(status().isNoContent());
+        mockMvc.perform(delete("/api/ride-passengers/1")).andExpect(status().isNoContent());
 
         verify(ridePassengerService).delete(1L);
     }
@@ -195,8 +198,7 @@ public class RidePassengerControllerTest {
     void shouldReturn404WhenDeletingNonExistentRidePassenger() throws Exception {
         doThrow(new EntityNotFoundException("RidePassenger not found with id 99")).when(ridePassengerService).delete(99L);
 
-        mockMvc.perform(delete("/api/ride-passengers/99"))
-                .andExpect(status().isNotFound());
+        mockMvc.perform(delete("/api/ride-passengers/99")).andExpect(status().isNotFound());
 
         verify(ridePassengerService).delete(99L);
     }

@@ -34,12 +34,12 @@ public class RideControllerTest {
     @MockitoBean
     private RideService rideService;
 
+    private final LocalDateTime departureTime = LocalDateTime.of(2025, 6, 1, 7, 30);
+
     @BeforeEach
     void setUp() {
         objectMapper.registerModule(new JavaTimeModule());
     }
-
-    private final LocalDateTime departureTime = LocalDateTime.of(2025, 6, 1, 8, 30);
 
     private RideResponseDto buildResponse() {
         return RideResponseDto.builder()
@@ -71,8 +71,8 @@ public class RideControllerTest {
         mockMvc.perform(get("/api/rides"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].destinationOrOrigin").value("Miraflores"))
-                .andExpect(jsonPath("$[0].fromUTEC").value(true));
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].destinationOrOrigin").value("Miraflores"));
 
         verify(rideService).findAll();
     }
@@ -93,8 +93,9 @@ public class RideControllerTest {
         mockMvc.perform(get("/api/rides/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.publicationId").value(1))
                 .andExpect(jsonPath("$.driverId").value(1))
-                .andExpect(jsonPath("$.destinationOrOrigin").value("Miraflores"));
+                .andExpect(jsonPath("$.vehicleId").value(1));
 
         verify(rideService).findById(1L);
     }
@@ -118,14 +119,14 @@ public class RideControllerTest {
                         .content(objectMapper.writeValueAsString(buildRequest())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.publicationId").value(1))
-                .andExpect(jsonPath("$.destinationOrOrigin").value("Miraflores"));
+                .andExpect(jsonPath("$.destinationOrOrigin").value("Miraflores"))
+                .andExpect(jsonPath("$.fromUTEC").value(true));
 
         verify(rideService).create(any(RideRequestDto.class));
     }
 
     @Test
-    void shouldReturn400WhenRequestIsMissingRequiredFields() throws Exception {
+    void shouldReturn400WhenRequiredFieldsAreMissing() throws Exception {
         RideRequestDto invalid = RideRequestDto.builder()
                 .destinationOrOrigin("")
                 .build();
@@ -142,31 +143,31 @@ public class RideControllerTest {
     void shouldUpdateRideWhenValidRequest() throws Exception {
         RideResponseDto updated = RideResponseDto.builder()
                 .id(1L)
-                .publicationId(1L)
-                .driverId(2L)
-                .vehicleId(2L)
+                .publicationId(2L)
+                .driverId(3L)
+                .vehicleId(4L)
                 .fromUTEC(false)
-                .destinationOrOrigin("San Isidro")
+                .destinationOrOrigin("UTEC")
+                .departureTime(departureTime)
+                .build();
+
+        RideRequestDto request = RideRequestDto.builder()
+                .publicationId(2L)
+                .driverId(3L)
+                .vehicleId(4L)
+                .fromUTEC(false)
+                .destinationOrOrigin("UTEC")
                 .departureTime(departureTime)
                 .build();
 
         when(rideService.update(eq(1L), any(RideRequestDto.class))).thenReturn(updated);
 
-        RideRequestDto req = RideRequestDto.builder()
-                .publicationId(1L)
-                .driverId(2L)
-                .vehicleId(2L)
-                .fromUTEC(false)
-                .destinationOrOrigin("San Isidro")
-                .departureTime(departureTime)
-                .build();
-
         mockMvc.perform(put("/api/rides/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(req)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.destinationOrOrigin").value("San Isidro"))
-                .andExpect(jsonPath("$.fromUTEC").value(false));
+                .andExpect(jsonPath("$.fromUTEC").value(false))
+                .andExpect(jsonPath("$.destinationOrOrigin").value("UTEC"));
 
         verify(rideService).update(eq(1L), any(RideRequestDto.class));
     }

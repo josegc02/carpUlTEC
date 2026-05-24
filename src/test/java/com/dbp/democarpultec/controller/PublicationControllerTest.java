@@ -84,7 +84,7 @@ public class PublicationControllerTest {
     private UserResponseDto buildCurrentUser() {
         return UserResponseDto.builder()
                 .id(1L)
-                .email("juan@utec.edu.pe")
+                .email("juan.perez@utec.edu.pe")
                 .name("Juan")
                 .lastName("Perez")
                 .build();
