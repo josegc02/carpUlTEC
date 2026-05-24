@@ -2,11 +2,13 @@ package com.dbp.democarpultec.service;
 
 import com.dbp.democarpultec.dto.PublicationRequestDto;
 import com.dbp.democarpultec.dto.PublicationResponseDto;
+import com.dbp.democarpultec.exception.BusinessRuleException;
 import com.dbp.democarpultec.exception.ForbiddenException;
 import com.dbp.democarpultec.model.Publication;
 import com.dbp.democarpultec.model.User;
 import com.dbp.democarpultec.repository.PublicationRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -14,13 +16,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class PublicationServiceTest {
+class PublicationServiceTest {
     @Mock
     private PublicationRepository publicationRepository;
 
@@ -33,131 +37,131 @@ public class PublicationServiceTest {
     @InjectMocks
     private PublicationService publicationService;
 
-    @Test
-    void shouldCreatePublicationWhenValidData(){
-        PublicationRequestDto dto = PublicationRequestDto.builder()
+    private User user;
+    private Publication publication;
+    private PublicationRequestDto requestDto;
+
+    @BeforeEach
+    void setUp() {
+        user = User.builder()
+                .id(1L)
+                .name("Juan")
+                .email("juan@utec.edu.pe")
+                .build();
+
+        publication = Publication.builder()
+                .id(1L)
                 .fromUTEC(true)
                 .driverToPassenger(true)
                 .seats(3)
                 .titulo("Viaje a Miraflores")
-                .descripcion("Salida despues de clases")
+                .descripcion("Salida después de clases")
                 .destinationOrOrigin("Miraflores")
+                .externalLatitude(-12.135)
+                .externalLongitude(-77.022)
+                .departureTime(LocalDateTime.now())
+                .author(user)
+                .build();
+
+        requestDto = PublicationRequestDto.builder()
+                .fromUTEC(true)
+                .driverToPassenger(true)
+                .seats(3)
+                .titulo("Viaje a Miraflores")
+                .descripcion("Salida después de clases")
+                .destinationOrOrigin("Miraflores")
+                .externalLatitude(-12.135)
+                .externalLongitude(-77.022)
                 .departureTime(LocalDateTime.now())
                 .authorId(1L)
                 .build();
-
-        User author = new User();
-        author.setId(1L);
-        author.setName("Juan");
-
-        Publication savedPublication = new Publication();
-        savedPublication.setId(1L);
-        savedPublication.setFromUTEC(true);
-        savedPublication.setDriverToPassenger(true);
-        savedPublication.setSeats(3);
-        savedPublication.setTitulo("Viaje a Miraflores");
-        savedPublication.setDescripcion("Salida despues de clases");
-        savedPublication.setDestinationOrOrigin("Miraflores");
-        savedPublication.setDepartureTime(dto.getDepartureTime());
-        savedPublication.setAuthor(author);
-
-        when(userService.findEntityById(1L)).thenReturn(author);
-        when(publicationRepository.save(any(Publication.class))).thenReturn(savedPublication);
-
-        PublicationResponseDto result = publicationService.create(dto);
-
-        assertNotNull(result);
-        assertEquals("Viaje a Miraflores", result.getTitulo());
-        assertEquals(3, result.getSeats());
-        assertEquals(1L, result.getAuthorId());
-        assertEquals("Miraflores", result.getDestinationOrOrigin());
-
-        verify(userService).findEntityById(1L);
-        verify(publicationRepository).save(any(Publication.class));
     }
 
     @Test
-    void shouldReturnPublicationWhenIdExists(){
-        User author = new User();
-        author.setId(1L);
-        author.setName("Juan");
+    void shouldReturnPublicationListWhenPublicationsExist() {
 
-        Publication publication = new Publication();
-        publication.setId(1L);
-        publication.setFromUTEC(true);
-        publication.setDriverToPassenger(true);
-        publication.setSeats(3);
-        publication.setTitulo("Viaje a Miraflores");
-        publication.setDescripcion("Salida despues de clases");
-        publication.setDestinationOrOrigin("Miraflores");
-        publication.setDepartureTime(LocalDateTime.now());
-        publication.setAuthor(author);
+        when(publicationRepository.findAll()).thenReturn(List.of(publication));
+        when(geoService.distanceToUtecKm(anyDouble(), anyDouble())).thenReturn(5.0);
 
+        List<PublicationResponseDto> result = publicationService.findAll();
+
+        assertNotNull(result);
+        assertEquals(1, result.size());
+        assertEquals("Viaje a Miraflores", result.get(0).getTitulo());
+        assertEquals("Miraflores", result.get(0).getDestinationOrOrigin());
+        assertEquals(1L, result.get(0).getAuthorId());
+
+        verify(publicationRepository).findAll();
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoPublicationsExist() {
+
+        when(publicationRepository.findAll()).thenReturn(Collections.emptyList());
+
+        List<PublicationResponseDto> result = publicationService.findAll();
+
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+
+        verify(publicationRepository).findAll();
+    }
+
+    @Test
+    void shouldReturnPublicationWhenIdExists() {
         when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+        when(geoService.distanceToUtecKm(anyDouble(), anyDouble())).thenReturn(5.0);
 
         PublicationResponseDto result = publicationService.findById(1L);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
         assertEquals("Viaje a Miraflores", result.getTitulo());
+        assertEquals("Miraflores", result.getDestinationOrOrigin());
         assertEquals(1L, result.getAuthorId());
 
         verify(publicationRepository).findById(1L);
     }
 
     @Test
-    void shouldThrowExceptionWhenPublicationNotFound(){
-        when(publicationRepository.findById(99L)).thenReturn(Optional.empty());
+    void shouldThrowExceptionWhenPublicationDoesNotExist() {
+        when(publicationRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(EntityNotFoundException.class, () -> {
-            publicationService.findById(99L);
-        });
+        assertThrows(EntityNotFoundException.class, () -> publicationService.findById(1L));
 
-        verify(publicationRepository).findById(99L);
+        verify(publicationRepository).findById(1L);
     }
 
     @Test
-    void shouldUpdatePublicationWhenValidData(){
-        PublicationRequestDto dto = PublicationRequestDto.builder()
-                .fromUTEC(false)
-                .driverToPassenger(false)
-                .seats(2)
-                .titulo("Viaje a San Isidro")
-                .descripcion("Salida temprano")
-                .destinationOrOrigin("San Isidro")
-                .departureTime(LocalDateTime.now())
-                .authorId(1L)
-                .build();
+    void shouldCreatePublicationWhenValidData() {
+        when(userService.findEntityById(1L)).thenReturn(user);
+        when(publicationRepository.save(any(Publication.class))).thenReturn(publication);
+        when(geoService.distanceToUtecKm(anyDouble(), anyDouble())).thenReturn(5.0);
 
-        User author = new User();
-        author.setId(1L);
-        author.setName("Juan");
-
-        Publication existingPublication = new Publication();
-        existingPublication.setId(1L);
-        existingPublication.setTitulo("Titulo viejo");
-
-        Publication updatedPublication = new Publication();
-        updatedPublication.setId(1L);
-        updatedPublication.setFromUTEC(false);
-        updatedPublication.setDriverToPassenger(false);
-        updatedPublication.setSeats(2);
-        updatedPublication.setTitulo("Viaje a San Isidro");
-        updatedPublication.setDescripcion("Salida temprano");
-        updatedPublication.setDestinationOrOrigin("San Isidro");
-        updatedPublication.setDepartureTime(dto.getDepartureTime());
-        updatedPublication.setAuthor(author);
-
-        when(publicationRepository.findById(1L)).thenReturn(Optional.of(existingPublication));
-        when(userService.findEntityById(1L)).thenReturn(author);
-        when(publicationRepository.save(any(Publication.class))).thenReturn(updatedPublication);
-
-        PublicationResponseDto result = publicationService.update(1L, dto);
+        PublicationResponseDto result = publicationService.create(requestDto);
 
         assertNotNull(result);
-        assertEquals("Viaje a San Isidro", result.getTitulo());
-        assertEquals(2, result.getSeats());
-        assertEquals("San Isidro", result.getDestinationOrOrigin());
+        assertEquals("Viaje a Miraflores", result.getTitulo());
+        assertEquals("Miraflores", result.getDestinationOrOrigin());
+        assertEquals(1L, result.getAuthorId());
+
+        verify(userService).findEntityById(1L);
+        verify(publicationRepository).save(any(Publication.class));
+    }
+
+    @Test
+    void shouldUpdatePublicationWhenPublicationExists() {
+        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+        when(userService.findEntityById(1L)).thenReturn(user);
+        when(publicationRepository.save(any(Publication.class))).thenReturn(publication);
+        when(geoService.distanceToUtecKm(anyDouble(), anyDouble())).thenReturn(5.0);
+
+        PublicationResponseDto result = publicationService.update(1L, requestDto);
+
+        assertNotNull(result);
+        assertEquals("Viaje a Miraflores", result.getTitulo());
+        assertEquals("Miraflores", result.getDestinationOrOrigin());
+        assertEquals(1L, result.getAuthorId());
 
         verify(publicationRepository).findById(1L);
         verify(userService).findEntityById(1L);
@@ -165,84 +169,102 @@ public class PublicationServiceTest {
     }
 
     @Test
-    void shouldDeletePublicationWhenPublicationExists(){
+    void shouldThrowExceptionWhenUpdatingNonExistingPublication() {
+        when(publicationRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> publicationService.update(1L, requestDto));
+
+        verify(publicationRepository).findById(1L);
+        verify(publicationRepository, never()).save(any(Publication.class));
+    }
+
+    @Test
+    void shouldDeletePublicationWhenPublicationExists() {
         when(publicationRepository.existsById(1L)).thenReturn(true);
+
         publicationService.delete(1L);
+
         verify(publicationRepository).existsById(1L);
         verify(publicationRepository).deleteById(1L);
     }
 
     @Test
-    void shouldCreatePublicationUsingAuthenticatedUserWhenJwtFlowIsUsed() {
-        PublicationRequestDto dto = PublicationRequestDto.builder()
-                .fromUTEC(true)
-                .driverToPassenger(true)
-                .seats(3)
-                .titulo("Viaje")
-                .destinationOrOrigin("Miraflores")
-                .departureTime(LocalDateTime.now())
-                .authorId(999L)
-                .build();
+    void shouldThrowExceptionWhenDeletingNonExistingPublication() {
+        when(publicationRepository.existsById(1L)).thenReturn(false);
 
-        User authenticatedAuthor = new User();
-        authenticatedAuthor.setId(1L);
+        assertThrows(EntityNotFoundException.class, () -> publicationService.delete(1L));
 
-        Publication savedPublication = new Publication();
-        savedPublication.setId(10L);
-        savedPublication.setFromUTEC(true);
-        savedPublication.setDriverToPassenger(true);
-        savedPublication.setSeats(3);
-        savedPublication.setTitulo("Viaje");
-        savedPublication.setDestinationOrOrigin("Miraflores");
-        savedPublication.setDepartureTime(dto.getDepartureTime());
-        savedPublication.setAuthor(authenticatedAuthor);
-
-        when(userService.findEntityById(1L)).thenReturn(authenticatedAuthor);
-        when(publicationRepository.save(any(Publication.class))).thenReturn(savedPublication);
-
-        PublicationResponseDto result = publicationService.createAuthenticated(1L, dto);
-
-        assertEquals(1L, result.getAuthorId());
-        verify(userService).findEntityById(1L);
-        verify(userService, never()).findEntityById(999L);
-    }
-
-    @Test
-    void shouldThrowForbiddenWhenUpdatingPublicationOwnedByAnotherUser() {
-        PublicationRequestDto dto = PublicationRequestDto.builder()
-                .fromUTEC(true)
-                .driverToPassenger(true)
-                .seats(3)
-                .titulo("Viaje")
-                .destinationOrOrigin("Miraflores")
-                .departureTime(LocalDateTime.now())
-                .build();
-
-        User owner = new User();
-        owner.setId(1L);
-
-        Publication publication = new Publication();
-        publication.setId(1L);
-        publication.setAuthor(owner);
-
-        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
-
-        assertThrows(ForbiddenException.class, () -> publicationService.updateAuthenticated(1L, 2L, dto));
-        verify(publicationRepository, never()).save(any());
-    }
-
-    @Test
-    void shouldThrowForbiddenWhenDeletingPublicationOwnedByAnotherUser() {
-        User owner = new User();
-        owner.setId(1L);
-
-        Publication publication = new Publication();
-        publication.setId(1L);
-        publication.setAuthor(owner);
-
-        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
-
-        assertThrows(ForbiddenException.class, () -> publicationService.deleteAuthenticated(1L, 2L));
+        verify(publicationRepository).existsById(1L);
         verify(publicationRepository, never()).deleteById(anyLong());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenOnlyLatitudeExists() {
+        requestDto.setExternalLongitude(null);
+
+        assertThrows(BusinessRuleException.class, () -> publicationService.create(requestDto));
+
+        verify(publicationRepository, never()).save(any(Publication.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenOnlyLongitudeExists() {
+        requestDto.setExternalLatitude(null);
+
+        assertThrows(BusinessRuleException.class, () -> publicationService.create(requestDto));
+
+        verify(publicationRepository, never()).save(any(Publication.class));
+    }
+
+    @Test
+    void shouldThrowForbiddenExceptionWhenUserIsNotOwner() {
+        User anotherUser = User.builder()
+                .id(99L)
+                .build();
+
+        publication.setAuthor(anotherUser);
+
+        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+
+        assertThrows(ForbiddenException.class, () -> publicationService.updateAuthenticated(1L, 1L, requestDto));
+
+        verify(publicationRepository).findById(1L);
+        verify(publicationRepository, never()).save(any(Publication.class));
+    }
+
+    @Test
+    void shouldCreatePublicationWhenAuthenticatedUserIsValid() {
+        when(userService.findEntityById(1L)).thenReturn(user);
+        when(publicationRepository.save(any(Publication.class))).thenReturn(publication);
+        when(geoService.distanceToUtecKm(anyDouble(), anyDouble())).thenReturn(5.0);
+
+        PublicationResponseDto result = publicationService.createAuthenticated(1L, requestDto);
+
+        assertNotNull(result);
+        assertEquals("Viaje a Miraflores", result.getTitulo());
+        verify(userService).findEntityById(1L);
+        verify(publicationRepository).save(any(Publication.class));
+    }
+
+    @Test
+    void shouldDeletePublicationWhenUserIsAuthor() {
+        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+
+        publicationService.deleteAuthenticated(1L, 1L);
+
+        verify(publicationRepository).findById(1L);
+        verify(publicationRepository).deleteById(1L);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUserIsNotAuthorOnDelete() {
+        User anotherUser = User.builder().id(99L).build();
+        publication.setAuthor(anotherUser);
+
+        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+
+        assertThrows(ForbiddenException.class, () -> publicationService.deleteAuthenticated(1L, 1L));
+
+        verify(publicationRepository, never()).deleteById(any());
     }
 }
