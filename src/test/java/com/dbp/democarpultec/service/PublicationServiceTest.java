@@ -2,6 +2,7 @@ package com.dbp.democarpultec.service;
 
 import com.dbp.democarpultec.dto.PublicationRequestDto;
 import com.dbp.democarpultec.dto.PublicationResponseDto;
+import com.dbp.democarpultec.exception.ForbiddenException;
 import com.dbp.democarpultec.model.Publication;
 import com.dbp.democarpultec.model.User;
 import com.dbp.democarpultec.repository.PublicationRepository;
@@ -25,6 +26,9 @@ public class PublicationServiceTest {
 
     @Mock
     private UserService userService;
+
+    @Mock
+    private GeoService geoService;
 
     @InjectMocks
     private PublicationService publicationService;
@@ -166,5 +170,79 @@ public class PublicationServiceTest {
         publicationService.delete(1L);
         verify(publicationRepository).existsById(1L);
         verify(publicationRepository).deleteById(1L);
+    }
+
+    @Test
+    void shouldCreatePublicationUsingAuthenticatedUserWhenJwtFlowIsUsed() {
+        PublicationRequestDto dto = PublicationRequestDto.builder()
+                .fromUTEC(true)
+                .driverToPassenger(true)
+                .seats(3)
+                .titulo("Viaje")
+                .destinationOrOrigin("Miraflores")
+                .departureTime(LocalDateTime.now())
+                .authorId(999L)
+                .build();
+
+        User authenticatedAuthor = new User();
+        authenticatedAuthor.setId(1L);
+
+        Publication savedPublication = new Publication();
+        savedPublication.setId(10L);
+        savedPublication.setFromUTEC(true);
+        savedPublication.setDriverToPassenger(true);
+        savedPublication.setSeats(3);
+        savedPublication.setTitulo("Viaje");
+        savedPublication.setDestinationOrOrigin("Miraflores");
+        savedPublication.setDepartureTime(dto.getDepartureTime());
+        savedPublication.setAuthor(authenticatedAuthor);
+
+        when(userService.findEntityById(1L)).thenReturn(authenticatedAuthor);
+        when(publicationRepository.save(any(Publication.class))).thenReturn(savedPublication);
+
+        PublicationResponseDto result = publicationService.createAuthenticated(1L, dto);
+
+        assertEquals(1L, result.getAuthorId());
+        verify(userService).findEntityById(1L);
+        verify(userService, never()).findEntityById(999L);
+    }
+
+    @Test
+    void shouldThrowForbiddenWhenUpdatingPublicationOwnedByAnotherUser() {
+        PublicationRequestDto dto = PublicationRequestDto.builder()
+                .fromUTEC(true)
+                .driverToPassenger(true)
+                .seats(3)
+                .titulo("Viaje")
+                .destinationOrOrigin("Miraflores")
+                .departureTime(LocalDateTime.now())
+                .build();
+
+        User owner = new User();
+        owner.setId(1L);
+
+        Publication publication = new Publication();
+        publication.setId(1L);
+        publication.setAuthor(owner);
+
+        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+
+        assertThrows(ForbiddenException.class, () -> publicationService.updateAuthenticated(1L, 2L, dto));
+        verify(publicationRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowForbiddenWhenDeletingPublicationOwnedByAnotherUser() {
+        User owner = new User();
+        owner.setId(1L);
+
+        Publication publication = new Publication();
+        publication.setId(1L);
+        publication.setAuthor(owner);
+
+        when(publicationRepository.findById(1L)).thenReturn(Optional.of(publication));
+
+        assertThrows(ForbiddenException.class, () -> publicationService.deleteAuthenticated(1L, 2L));
+        verify(publicationRepository, never()).deleteById(anyLong());
     }
 }

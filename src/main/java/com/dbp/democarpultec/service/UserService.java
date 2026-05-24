@@ -48,6 +48,11 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id " + id));
     }
 
+    public User findEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email " + email));
+    }
+
     private void updateEntity(User user, UserRequestDto dto) {
         user.setName(dto.getName());
         user.setLastName(dto.getLastName());

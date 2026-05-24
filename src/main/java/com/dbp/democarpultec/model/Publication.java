@@ -47,6 +47,10 @@ public class Publication {
     @Column(nullable = false)
     private String destinationOrOrigin;
 
+    private Double externalLatitude;
+
+    private Double externalLongitude;
+
     @Column(nullable = false)
     private LocalDateTime departureTime;
 

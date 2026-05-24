@@ -2,6 +2,7 @@ package com.dbp.democarpultec.controller;
 
 import com.dbp.democarpultec.dto.UserRequestDto;
 import com.dbp.democarpultec.dto.UserResponseDto;
+import com.dbp.democarpultec.service.AuthService;
 import com.dbp.democarpultec.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final AuthService authService;
 
     @GetMapping
     public List<UserResponseDto> findAll() {
@@ -26,6 +28,11 @@ public class UserController {
     @GetMapping("/{id}")
     public UserResponseDto findById(@PathVariable Long id) {
         return userService.findById(id);
+    }
+
+    @GetMapping("/me")
+    public UserResponseDto me(@RequestHeader(value = "Authorization", required = false) String authorization) {
+        return authService.getCurrentUser(authorization);
     }
 
     @PostMapping

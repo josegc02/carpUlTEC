@@ -1,0 +1,249 @@
+Slice 1 - Estados y Excepciones
+Nombre del slice:
+- Estados y excepciones
+
+Archivos modificados:
+- src/main/java/com/dbp/democarpultec/model/enums/Status.java
+- src/main/java/com/dbp/democarpultec/model/RequestPublication.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationRequestDto.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationResponseDto.java
+- src/main/java/com/dbp/democarpultec/service/RequestPublicationService.java
+- src/main/java/com/dbp/democarpultec/exception/RestExceptionHandler.java
+- src/main/java/com/dbp/democarpultec/exception/BusinessRuleException.java
+- src/main/java/com/dbp/democarpultec/exception/ForbiddenException.java
+- src/main/java/com/dbp/democarpultec/exception/DuplicateResourceException.java
+- src/main/java/com/dbp/democarpultec/exception/UnauthorizedException.java
+- src/test/java/com/dbp/democarpultec/controller/RequestPublicationControllerTest.java
+- src/test/java/com/dbp/democarpultec/service/RequestPublicationServiceTest.java
+
+Que se implemento:
+- Se normalizo el estado de RequestPublication con enum Status en mayusculas: PENDING, ACCEPTED, REJECTED, CANCELLED.
+- RequestPublication paso a persistir status tipado (no String) y default PENDING en creacion.
+- El DTO de creacion de request ya no permite controlar status directamente.
+- Se consolido el manejo de errores HTTP con respuestas consistentes en RestExceptionHandler.
+- Se agregaron excepciones de negocio dedicadas para reglas, conflicto, no autorizado y prohibido.
+
+Reglas de negocio cubiertas:
+- Solo se aceptan estados validos del flujo definido.
+- Toda solicitud nueva inicia en estado PENDING.
+- Se evita manipulacion de estado desde payload de creacion.
+
+Decisiones importantes:
+- Estado de request representado como enum (tipado fuerte) para evitar valores invalidos.
+- Contrato de error uniforme para facilitar consumo desde frontend y testing.
+
+---
+
+Slice 2 - Registro, Login y JWT
+Nombre del slice:
+- Registro, login y JWT
+
+Archivos modificados:
+- pom.xml
+- src/main/java/com/dbp/democarpultec/model/User.java
+- src/main/java/com/dbp/democarpultec/repository/UserRepository.java
+- src/main/java/com/dbp/democarpultec/service/UserService.java
+- src/main/java/com/dbp/democarpultec/controller/UserController.java
+- src/main/java/com/dbp/democarpultec/controller/AuthController.java
+- src/main/java/com/dbp/democarpultec/dto/AuthRegisterRequestDto.java
+- src/main/java/com/dbp/democarpultec/dto/AuthLoginRequestDto.java
+- src/main/java/com/dbp/democarpultec/dto/AuthResponseDto.java
+- src/main/java/com/dbp/democarpultec/service/AuthService.java
+- src/main/java/com/dbp/democarpultec/service/JwtService.java
+- src/test/java/com/dbp/democarpultec/controller/AuthControllerTest.java
+- src/test/java/com/dbp/democarpultec/controller/UserControllerTest.java
+- src/test/java/com/dbp/democarpultec/service/AuthServiceTest.java
+- src/test/resources/application-test.properties
+
+Que se implemento:
+- Se agrego passwordHash al modelo User.
+- Se implementaron endpoints POST /api/auth/register y POST /api/auth/login.
+- Se agrego validacion de dominio institucional @utec.edu.pe en registro.
+- Se implemento emision y validacion de JWT para autenticacion.
+- Se agrego endpoint GET /api/users/me leyendo Authorization Bearer token.
+
+Reglas de negocio cubiertas:
+- No se permite registrar correos fuera de @utec.edu.pe.
+- No se permite registrar un email duplicado.
+- Login solo valida credenciales correctas.
+- /api/users/me exige token Bearer valido.
+
+Decisiones importantes:
+- Password guardado como hash BCrypt (no texto plano).
+- JWT con subject=email y expiracion configurable.
+- Se mantuvo integracion sin introducir framework de seguridad completo todavia (enfocado al alcance del slice 2).
+
+---
+
+Slice 3 - Ownership y DTOs seguros
+Nombre del slice:
+- Ownership y DTOs seguros
+
+Archivos modificados:
+- src/main/java/com/dbp/democarpultec/controller/PublicationController.java
+- src/main/java/com/dbp/democarpultec/controller/RequestPublicationController.java
+- src/main/java/com/dbp/democarpultec/service/PublicationService.java
+- src/main/java/com/dbp/democarpultec/service/RequestPublicationService.java
+- src/main/java/com/dbp/democarpultec/dto/PublicationRequestDto.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationRequestDto.java
+- src/test/java/com/dbp/democarpultec/controller/PublicationControllerTest.java
+- src/test/java/com/dbp/democarpultec/controller/RequestPublicationControllerTest.java
+- src/test/java/com/dbp/democarpultec/service/PublicationServiceTest.java
+- src/test/java/com/dbp/democarpultec/service/RequestPublicationServiceTest.java
+
+Que se implemento:
+- Creacion, actualizacion y eliminacion de publicaciones ahora usan el usuario autenticado del JWT.
+- Creacion, actualizacion y eliminacion de request-publications ahora usan el usuario autenticado del JWT.
+- Se agregaron metodos de servicio para flujo autenticado y validacion de ownership.
+- `authorId` y `requesterId` dejaron de ser obligatorios en DTO de entrada para no depender del cliente.
+
+Reglas de negocio cubiertas:
+- Solo el autor de una publicacion puede actualizarla o eliminarla.
+- Solo el requester de una solicitud puede actualizarla o eliminarla.
+- Si hay JWT, el backend toma identidad del token y no confia en IDs sensibles del payload.
+
+Decisiones importantes:
+- Se mantuvieron metodos CRUD legacy internos para no romper compatibilidad mientras se migra el flujo completo.
+- La validacion de ownership se centralizo en servicios (no en controller) para mantener consistencia de reglas.
+
+---
+
+Slice 4 - Flujo de solicitudes
+Nombre del slice:
+- Flujo de solicitudes
+
+Archivos modificados:
+- src/main/java/com/dbp/democarpultec/controller/PublicationController.java
+- src/main/java/com/dbp/democarpultec/controller/RequestPublicationController.java
+- src/main/java/com/dbp/democarpultec/service/RequestPublicationService.java
+- src/main/java/com/dbp/democarpultec/repository/RequestPublicationRepository.java
+- src/main/java/com/dbp/democarpultec/model/RequestPublication.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationRequestDto.java
+- src/test/java/com/dbp/democarpultec/controller/PublicationControllerTest.java
+- src/test/java/com/dbp/democarpultec/controller/RequestPublicationControllerTest.java
+- src/test/java/com/dbp/democarpultec/service/RequestPublicationServiceTest.java
+
+Que se implemento:
+- Se agrego `POST /api/publications/{publicationId}/requests`.
+- Se agrego `GET /api/publications/{publicationId}/requests`.
+- Se agrego `PATCH /api/request-publications/{id}/cancel`.
+- Se agrego `PATCH /api/request-publications/{id}/reject`.
+- Se incorporaron validaciones de flujo y transiciones de estado en el servicio.
+
+Reglas de negocio cubiertas:
+- El requester no puede crear solicitud sobre su propia publicacion.
+- `pickupPointOrDestine` es obligatorio al crear solicitud.
+- El requester debe tener rol opuesto al de la publicacion.
+- Solo se permite una solicitud activa por requester/publicacion.
+- Solo el autor de la publicacion puede rechazar.
+- Solo el requester puede cancelar.
+- Solo solicitudes `PENDING` pueden cancelarse o rechazarse.
+
+Decisiones importantes:
+- Se elimino la restriccion unica DB `(publication_id, requester_id)` para permitir historico y controlar duplicado activo por regla de negocio.
+- Las validaciones del flujo se concentraron en `RequestPublicationService` para mantener consistencia entre endpoints.
+
+---
+
+Slice 5 - Aceptacion y Ride
+Nombre del slice:
+- Aceptacion y Ride
+
+Archivos modificados:
+- src/main/java/com/dbp/democarpultec/controller/RequestPublicationController.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationAcceptRequestDto.java
+- src/main/java/com/dbp/democarpultec/service/RequestPublicationService.java
+- src/main/java/com/dbp/democarpultec/repository/RideRepository.java
+- src/main/java/com/dbp/democarpultec/repository/RidePassengerRepository.java
+- src/main/java/com/dbp/democarpultec/repository/RequestPublicationRepository.java
+- src/test/java/com/dbp/democarpultec/controller/RequestPublicationControllerTest.java
+- src/test/java/com/dbp/democarpultec/service/RequestPublicationServiceTest.java
+
+Que se implemento:
+- Se agrego `PATCH /api/request-publications/{id}/accept` recibiendo `vehicleId`.
+- El backend determina conductor/pasajero reales segun combinacion publication/request.
+- Se valida que el vehiculo usado pertenezca al conductor real.
+- Se crea Ride si no existe o se reutiliza para publicaciones de conductor.
+- Se agrega RidePassenger en aceptaciones validas y se actualiza estado del request a `ACCEPTED`.
+
+Reglas de negocio cubiertas:
+- Solo el autor de la publicacion puede aceptar solicitudes.
+- Solo requests `PENDING` pueden aceptarse.
+- En publicacion de conductor se validan cupos disponibles antes de agregar pasajero.
+- En publicacion de pasajero solo se acepta un conductor y se rechazan otros requests pendientes.
+
+Decisiones importantes:
+- La aceptacion se hizo transaccional para mantener consistencia entre request, ride y ride_passenger.
+- Se centralizo el flujo de aceptacion en `RequestPublicationService` para evitar logica dispersa.
+
+---
+
+Slice 6 - Google Maps MVP
+Nombre del slice:
+- Google Maps MVP
+
+Archivos modificados:
+- src/main/java/com/dbp/democarpultec/model/Publication.java
+- src/main/java/com/dbp/democarpultec/model/RequestPublication.java
+- src/main/java/com/dbp/democarpultec/dto/PublicationRequestDto.java
+- src/main/java/com/dbp/democarpultec/dto/PublicationResponseDto.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationRequestDto.java
+- src/main/java/com/dbp/democarpultec/dto/RequestPublicationResponseDto.java
+- src/main/java/com/dbp/democarpultec/service/GeoService.java
+- src/main/java/com/dbp/democarpultec/service/PublicationService.java
+- src/main/java/com/dbp/democarpultec/service/RequestPublicationService.java
+- src/main/resources/application.properties
+- src/test/resources/application-test.properties
+- src/test/java/com/dbp/democarpultec/service/GeoServiceTest.java
+- src/test/java/com/dbp/democarpultec/service/PublicationServiceTest.java
+- src/test/java/com/dbp/democarpultec/service/RequestPublicationServiceTest.java
+
+Que se implemento:
+- Se agregaron coordenadas minimas (`externalLatitude`, `externalLongitude`) en Publication y RequestPublication.
+- Se incorporo `GeoService` con calculo de distancia simple (Haversine) hacia coordenadas UTEC configurables.
+- Responses de publicaciones y solicitudes ahora incluyen `distanceToUtecKm`.
+- Se agrego validacion para exigir par completo de coordenadas (lat/lon juntas) cuando se envian.
+
+Reglas de negocio cubiertas:
+- Coordenadas geograficas validas por rango lat/lon en DTOs.
+- No se permite enviar solo una coordenada sin la otra.
+- Distancia a UTEC se calcula de forma consistente desde backend.
+
+Decisiones importantes:
+- No se creo entidad nueva de ubicacion; se mantuvo el modelo simple dentro de Publication/RequestPublication.
+- Coordenadas UTEC quedan como configuracion (`app.utec.latitude`, `app.utec.longitude`) para evitar hardcode operativo.
+
+---
+
+Slice 7 - Correo de registro
+Nombre del slice:
+- Correo de registro
+
+Archivos modificados:
+- pom.xml
+- src/main/java/com/dbp/democarpultec/DemoCarpultecApplication.java
+- src/main/java/com/dbp/democarpultec/service/AuthService.java
+- src/main/java/com/dbp/democarpultec/event/UserRegisteredEvent.java
+- src/main/java/com/dbp/democarpultec/listener/UserRegisteredListener.java
+- src/main/java/com/dbp/democarpultec/service/RegistrationEmailService.java
+- src/main/resources/application.properties
+- src/test/resources/application-test.properties
+- src/test/java/com/dbp/democarpultec/service/AuthServiceTest.java
+- src/test/java/com/dbp/democarpultec/listener/UserRegisteredListenerTest.java
+- src/test/java/com/dbp/democarpultec/service/RegistrationEmailServiceTest.java
+
+Que se implemento:
+- Se agrego `spring-boot-starter-mail`.
+- El registro de usuario ahora publica `UserRegisteredEvent` al finalizar alta exitosa.
+- Se implemento listener asincrono (`@Async`) para disparar envio de correo de bienvenida.
+- Se agrego servicio de correo dedicado con plantilla simple de bienvenida.
+- El envio de correo es opcional si no hay SMTP configurado, para no bloquear registro ni romper el arranque.
+
+Reglas de negocio cubiertas:
+- El registro no depende del correo: si no hay mailer, la cuenta se crea igual.
+- El envio de correo sucede fuera del flujo principal (asincrono/event-driven).
+- Se mantiene sin verificacion obligatoria por email en este MVP.
+
+Decisiones importantes:
+- Arquitectura por evento para desacoplar `AuthService` del mecanismo de correo.
+- Se hizo tolerante a ausencia de `JavaMailSender` para facilitar desarrollo local y tests.

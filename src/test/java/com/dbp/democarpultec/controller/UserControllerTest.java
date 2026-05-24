@@ -3,6 +3,7 @@ package com.dbp.democarpultec.controller;
 import com.dbp.democarpultec.dto.UserRequestDto;
 import com.dbp.democarpultec.dto.UserResponseDto;
 import com.dbp.democarpultec.model.enums.Carreras;
+import com.dbp.democarpultec.service.AuthService;
 import com.dbp.democarpultec.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +32,9 @@ public class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private AuthService authService;
 
     private UserResponseDto buildResponse(){
         return UserResponseDto.builder()
@@ -191,5 +195,18 @@ public class UserControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(userService).delete(99L);
+    }
+
+    @Test
+    void shouldReturnAuthenticatedUserWhenTokenIsValid() throws Exception {
+        when(authService.getCurrentUser("Bearer token123")).thenReturn(buildResponse());
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer token123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("juan@test.com"));
+
+        verify(authService).getCurrentUser("Bearer token123");
     }
 }

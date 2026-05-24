@@ -1,5 +1,6 @@
 package com.dbp.democarpultec.model;
 
+import com.dbp.democarpultec.model.enums.Status;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
@@ -14,11 +15,7 @@ import java.time.LocalDateTime;
 @Builder
 @Entity
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
-@Table(
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"publication_id", "requester_id"})
-        }
-)
+@Table
 public class RequestPublication {
 
     @Id
@@ -40,6 +37,14 @@ public class RequestPublication {
     @Column(nullable = false)
     private Boolean requesterIsDriver;
 
+    // Si requestIsDriver = 1, está actuando como destino final del CONDUCTOR
+    // si es 0, es pick up point para el PASAJERO
+    private String pickupPointOrDestine;
+
+    private Double externalLatitude;
+
+    private Double externalLongitude;
+
     // Si requesterIsDriver = true, seats = asientos que ofrece
     // Si requesterIsDriver = false, seats = asientos que pide
     @Column(nullable = false)
@@ -47,13 +52,11 @@ public class RequestPublication {
 
     private String message;
 
-    // Si requestIsDriver = 1, está actuando como destino final del CONDUCTOR
-    // si es 0, es pick up point para el PASAJERO
-    private String pickupPointOrDestine;
 
-    // Ejemplo: PENDING, ACCEPTED, REJECTED, CANCELLED
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String status;
+    private Status status;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
@@ -63,7 +66,7 @@ public class RequestPublication {
         this.createdAt = LocalDateTime.now();
 
         if (this.status == null) {
-            this.status = "PENDING";
+            this.status = Status.PENDING;
         }
     }
 }

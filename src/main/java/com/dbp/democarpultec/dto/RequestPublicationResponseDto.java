@@ -1,5 +1,6 @@
 package com.dbp.democarpultec.dto;
 
+import com.dbp.democarpultec.model.enums.Status;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,6 +21,9 @@ public class RequestPublicationResponseDto {
     private Integer seats;
     private String message;
     private String pickupPointOrDestine;
-    private String status;
+    private Double externalLatitude;
+    private Double externalLongitude;
+    private Double distanceToUtecKm;
+    private Status status;
     private LocalDateTime createdAt;
 }
