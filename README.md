@@ -1,264 +1,285 @@
-# Carpool UTEC - Backend API
+# Carpool UTEC
 
-Backend universitario para coordinar viajes compartidos entre estudiantes de UTEC. El proyecto permite que un usuario publique un viaje como conductor o solicite movilidad como pasajero, manteniendo reglas simples de propiedad, cupos, seguridad y reputacion.
+API REST para coordinar viajes compartidos entre estudiantes de la Universidad de Ingenieria y Tecnologia (UTEC). El proyecto busca facilitar que los estudiantes que se movilizan hacia o desde el campus puedan ofrecer asientos disponibles o solicitar un traslado, manteniendo un registro de solicitudes, viajes confirmados y calificaciones.
 
-## Estado Del Proyecto
+## Informacion Del Proyecto
 
-| Bloque | Estado | Evidencia o pendiente |
-| --- | --- | --- |
-| Entidades, relaciones JPA y DTOs | Implementado | Modelos para usuarios, vehiculos, publicaciones, solicitudes, viajes, pasajeros y reviews. |
-| Autenticacion y seguridad JWT | Implementado | Registro/login, access token, refresh token, roles `USER` y `ADMIN`. |
-| Logica principal de carpool | Implementado | Vehiculo del conductor, validacion de cupos, aceptacion que crea el viaje y ownership basico. |
-| Reviews y rating | Implementado | Reviewer autenticado, participantes reales y rating calculado desde reviews. |
-| Google Maps | Implementado/configurable | Usa `GOOGLE_MAPS_API_KEY`; la clave no se guarda en Git. |
-| Tests | Implementado | `200` tests ejecutados correctamente con `.\mvnw.cmd test`, incluyendo PostgreSQL con Testcontainers/Docker. |
-| Coleccion Postman | Incluida | Archivo `postman_collection.json`. |
-| AWS Deployment | **[PENDIENTE]** | Agregar infraestructura, URL publica y evidencias una vez desplegado. |
-
-## Problema Y Solucion
-
-Los estudiantes pueden necesitar compartir el traslado hacia o desde UTEC, pero coordinar por mensajes sueltos dificulta saber quien conduce, cuantos cupos hay y si la persona realmente participo en un viaje anterior. Carpool UTEC organiza ese flujo en una API REST.
-
-Un usuario registrado puede actuar como conductor en un viaje y como pasajero en otro. No existen roles permanentes `DRIVER` o `PASSENGER`; los unicos roles del sistema son `USER` y `ADMIN`. El rol de viaje se define por la publicacion o la solicitud:
-
-- Una publicacion de conductor ofrece cupos y debe seleccionar un vehiculo propio.
-- Una publicacion de pasajero indica los cupos que necesita.
-- La solicitud siempre debe ser del rol opuesto a la publicacion.
-- El viaje se crea al aceptar una solicitud; no se crea manualmente desde un endpoint publico.
-
-## Tecnologias
-
-| Tecnologia | Uso |
+| Campo | Detalle |
 | --- | --- |
-| Java 17 | Lenguaje configurado en Maven. |
-| Spring Boot 3.4.5 | Aplicacion web y configuracion principal. |
-| Spring Web | API REST. |
-| Spring Data JPA | Persistencia y relaciones. |
-| PostgreSQL | Base de datos relacional. |
-| Spring Security + JJWT | Autenticacion stateless con JWT. |
-| Jakarta Validation | Validacion de requests. |
-| Testcontainers | PostgreSQL real para pruebas de repositorio e integracion. |
-| JavaMailSender | Correo para eventos de registro/cambio de solicitud, cuando se configura SMTP. |
-| Google Maps API | Geocodificacion y distancia configurable. |
+| Curso | Desarrollo Basado en Plataformas - CS 2031 |
+| Periodo | 2026-1 |
+| Proyecto | Carpool UTEC |
+| Backend | Spring Boot |
+| Repositorio de entrega | [CARPOOL-UTEC-VF](https://github.com/josegc02/carpUlTEC/tree/CARPOOL-UTEC-VF) |
 
-## Arquitectura
+### Integrantes
 
-Se conserva una estructura directa y apropiada para un proyecto de curso:
+| Nombre | Codigo |
+| --- | --- |
+| [Agregar integrante] | [Agregar codigo] |
+| [Agregar integrante] | [Agregar codigo] |
+| [Agregar integrante] | [Agregar codigo] |
 
-```text
-controller -> service -> repository -> model
-                  |
-                 dto / exception / event / listener / security
-```
+## Problema Que Atiende
 
-- `controller`: expone endpoints y obtiene el usuario autenticado.
-- `service`: aplica reglas de negocio y conversion a DTOs.
-- `repository`: acceso a PostgreSQL con JPA.
-- `model`: entidades y relaciones.
-- `security`: filtro JWT, roles y configuracion CORS.
-- `event` y `listener`: eventos sencillos para notificaciones asincronas.
+El transporte hacia la universidad puede ser costoso o poco practico, especialmente en horarios de alta demanda. Al mismo tiempo, algunos estudiantes llegan en auto y pueden disponer de asientos libres. Carpool UTEC propone un canal organizado para vincular ambos casos dentro de una comunidad universitaria identificable mediante su correo institucional.
 
-No se usan microservicios ni patrones complejos; la prioridad es que el flujo de carpool sea legible y validable.
+La aplicacion no considera que un estudiante sea siempre conductor o siempre pasajero. Un mismo usuario puede ofrecer un viaje en una ocasion y solicitar movilidad en otra, dependiendo de su necesidad y de si dispone de un vehiculo registrado.
 
-## Entidades Principales
+## Funcionalidades Principales
+
+- Registro de estudiantes utilizando correo institucional `@utec.edu.pe`.
+- Inicio de sesion mediante JWT y refresh token.
+- Registro de vehiculos propios para usuarios que desean conducir.
+- Creacion de publicaciones para ofrecer asientos o buscar un conductor.
+- Solicitudes entre usuarios con validacion del tipo de publicacion.
+- Confirmacion de solicitudes y generacion del viaje correspondiente.
+- Registro de pasajeros confirmados dentro del viaje.
+- Calificaciones entre participantes luego de un viaje.
+- Consulta de rutas y ubicaciones mediante integracion configurable con Google Maps.
+- Notificaciones asociadas al registro y a cambios relevantes de solicitudes.
+
+## Flujo Principal Del Sistema
+
+1. Un estudiante se registra con su correo UTEC e inicia sesion.
+2. Si desea ofrecer transporte, registra un vehiculo propio indicando su capacidad.
+3. El usuario crea una publicacion:
+   - Como conductor, publica asientos disponibles y selecciona uno de sus vehiculos.
+   - Como pasajero, publica la cantidad de asientos que necesita.
+4. Otro estudiante responde a la publicacion con una solicitud compatible:
+   - Una publicacion de conductor recibe solicitudes de pasajeros.
+   - Una publicacion de pasajero recibe solicitudes de conductores.
+5. El autor de la publicacion revisa sus solicitudes recibidas y acepta o rechaza una solicitud pendiente.
+6. Al aceptar, el backend identifica al conductor, al pasajero y al vehiculo correspondiente, y crea el viaje confirmado.
+7. Los participantes pueden consultar el viaje generado.
+8. Una vez realizado el viaje, los participantes pueden registrar una calificacion sobre la otra persona.
+
+El viaje no se crea manualmente desde un formulario publico. Su creacion se produce a partir de una solicitud aceptada, de forma que siempre exista relacion entre publicacion, solicitud y participantes.
+
+## Modelo De Datos
 
 | Entidad | Responsabilidad |
 | --- | --- |
-| `User` | Estudiante registrado, rol de sistema y rating calculado. |
-| `Vehicle` | Vehiculo perteneciente al usuario autenticado. |
-| `Publication` | Oferta de conductor o necesidad de pasajero. |
-| `RequestPublication` | Solicitud/respuesta a una publicacion con estado `PENDING`, `ACCEPTED`, `REJECTED` o `CANCELLED`. |
-| `Ride` | Viaje confirmado creado desde la aceptacion. |
-| `RidePassenger` | Pasajero confirmado y cupos reservados. |
-| `Review` | Calificacion entre participantes de un viaje realizado. |
+| `User` | Representa al estudiante registrado, sus credenciales, rol del sistema y rating calculado. |
+| `Vehicle` | Vehiculo perteneciente a un usuario, utilizado cuando participa como conductor. |
+| `Publication` | Publicacion de un estudiante que ofrece asientos o solicita transporte. |
+| `RequestPublication` | Solicitud realizada sobre una publicacion y su estado de aprobacion. |
+| `Ride` | Viaje confirmado despues de aceptar una solicitud valida. |
+| `RidePassenger` | Relacion entre el viaje confirmado y el pasajero participante. |
+| `Review` | Calificacion realizada entre participantes de un viaje concluido. |
 
-## Reglas De Negocio Implementadas
+Las entidades se relacionan mediante JPA para conservar la trazabilidad del flujo: usuario, vehiculo, publicacion, solicitud, viaje y review.
 
-### Registro Y Seguridad
+## Reglas De Negocio
 
-- Solo se permite registrar correos que terminen en `@utec.edu.pe`.
-- La contrasena requiere al menos ocho caracteres, letras y numeros.
+### Usuarios Y Seguridad
+
+- El registro admite correos con dominio institucional `@utec.edu.pe`.
 - Las contrasenas se almacenan codificadas con BCrypt.
-- El login devuelve `accessToken` y `refreshToken`.
-- El token identifica al usuario que crea o modifica recursos propios.
-- `USER` y `ADMIN` son roles del sistema; conducir o viajar depende de cada viaje.
+- La autenticacion genera access token y refresh token.
+- Los roles del sistema son `USER` y `ADMIN`.
+- Ser conductor o pasajero depende de cada viaje y no de un rol permanente.
+- Para crear recursos sensibles, el backend obtiene al usuario desde el JWT y no confia en identificadores enviados desde el body.
 
 ### Vehiculos Y Publicaciones
 
-- El propietario del vehiculo se obtiene del JWT, no del body enviado por el cliente.
-- Un usuario puede registrar hasta dos vehiculos.
-- Para publicar como conductor (`driverToPassenger = true`) debe enviarse `vehicleId`.
-- El vehiculo seleccionado debe pertenecer al autor autenticado.
-- Los cupos ofrecidos no pueden exceder los asientos del vehiculo.
-- Una publicacion como pasajero no puede asociar un vehiculo.
+- Cada vehiculo queda asociado al usuario autenticado que lo registra.
+- Solo el propietario puede modificar o eliminar su vehiculo.
+- Para publicar como conductor, el usuario debe utilizar un vehiculo propio.
+- Los asientos ofrecidos no pueden superar la capacidad del vehiculo.
+- Una publicacion de pasajero no asigna vehiculo, porque el conductor se determinara al recibir una solicitud valida.
 
-### Solicitudes Y Viajes
+### Solicitudes Y Cupos
 
-- Nadie puede responder a su propia publicacion.
-- Una publicacion de conductor recibe solicitudes de pasajeros; una publicacion de pasajero recibe respuestas de conductores.
-- Quien responde como conductor debe tener un vehiculo registrado.
-- Una solicitud solo puede modificarse mientras esta `PENDING`.
-- Al editar una solicitud no se permite cambiar la publicacion ni el rol de la solicitud.
-- Solo el requester puede cancelar su solicitud.
-- Solo el autor de la publicacion puede aceptar o rechazar.
-- En publicaciones de conductor se controlan los cupos ya reservados antes de aceptar otro pasajero.
-- En publicaciones de pasajero, el conductor debe ofrecer y tener suficientes asientos.
-- `Ride` y `RidePassenger` se crean desde `accept()`; `POST /api/rides` y `POST /api/ride-passengers` no forman parte del flujo permitido.
+- Un usuario no puede solicitar su propia publicacion.
+- Una solicitud debe tener el sentido opuesto al de la publicacion original.
+- El conductor que responde a una publicacion debe contar con vehiculo valido.
+- Solo se pueden aceptar, rechazar o cancelar solicitudes que se encuentren pendientes.
+- El solicitante puede cancelar su solicitud y el autor de la publicacion puede aceptar o rechazar solicitudes recibidas.
+- Al aceptar se verifican nuevamente los cupos disponibles y la capacidad del vehiculo, evitando confirmar viajes incompatibles.
 
 ### Reviews Y Rating
 
-- El autor de una review sale del usuario autenticado; no se acepta `reviewerId` del body.
-- Un usuario no puede calificarse a si mismo.
-- Solo se puede calificar despues de la hora del viaje.
-- Reviewer y reviewed deben haber participado en el viaje.
-- No se permite repetir la misma review para el mismo viaje y participantes.
-- El rating de un usuario se calcula desde las reviews recibidas; no se acepta desde requests de usuario.
+- Una review solo puede ser registrada por un usuario autenticado que participo en el viaje.
+- No se permite calificarse a uno mismo ni calificar a una persona ajena al viaje.
+- No se permite registrar dos veces la misma calificacion para el mismo viaje y participante.
+- El rating mostrado para un usuario se obtiene de sus reviews y no es un valor que el usuario pueda asignarse directamente.
 
-## API Principal
+## Arquitectura Del Backend
 
-`Authorization: Bearer <accessToken>` es requerido salvo donde se indica como publico.
+El backend esta organizado en capas con responsabilidades separadas:
 
-| Metodo | Ruta | Acceso | Descripcion |
+```text
+controller -> service -> repository -> model
+                     -> dto
+                     -> exception
+```
+
+- `controller`: expone los endpoints HTTP y recibe las solicitudes.
+- `service`: concentra la logica del flujo de carpool y sus validaciones.
+- `repository`: realiza la persistencia mediante Spring Data JPA.
+- `model`: contiene las entidades del dominio.
+- `dto`: define los objetos de entrada y respuesta expuestos por la API.
+- `exception`: centraliza errores de negocio y respuestas consistentes.
+- `security`: configura autenticacion JWT y acceso a rutas protegidas.
+
+## Tecnologias Utilizadas
+
+| Tecnologia | Uso En El Proyecto |
+| --- | --- |
+| Java 17+ | Lenguaje de desarrollo |
+| Spring Boot | Construccion de la API REST |
+| Spring Data JPA | Acceso y persistencia de datos |
+| PostgreSQL | Base de datos relacional |
+| Spring Security | Autenticacion y autorizacion |
+| JWT | Tokens de acceso para endpoints protegidos |
+| BCrypt | Proteccion de contrasenas |
+| Testcontainers | Base PostgreSQL aislada para pruebas |
+| JUnit y Mockito | Pruebas automatizadas |
+| Google Maps API | Consulta de rutas y coordenadas |
+| JavaMailSender | Envio de correos y notificaciones |
+| Docker | Ejecucion local de PostgreSQL y preparacion para despliegue |
+
+## Endpoints Principales
+
+| Metodo | Ruta | Descripcion | Acceso |
 | --- | --- | --- | --- |
-| `POST` | `/api/auth/register` | Publico | Registrar usuario UTEC. |
-| `POST` | `/api/auth/login` | Publico | Iniciar sesion y recibir tokens. |
-| `POST` | `/api/auth/refresh` | Publico | Renovar tokens. |
-| `GET` | `/api/users/me` | JWT | Ver usuario autenticado. |
-| `GET` | `/api/users` | ADMIN | Listar usuarios. |
-| `POST` | `/api/vehicles` | JWT | Registrar vehiculo propio. |
-| `PUT/DELETE` | `/api/vehicles/{id}` | JWT/owner | Administrar vehiculo propio. |
-| `GET` | `/api/publications` | Publico | Listar publicaciones. |
-| `GET` | `/api/publications/{id}` | Publico | Ver publicacion. |
-| `POST` | `/api/publications` | JWT | Crear publicacion. |
-| `PUT/DELETE` | `/api/publications/{id}` | JWT/autor | Editar o eliminar publicacion propia. |
-| `POST` | `/api/publications/{id}/requests` | JWT | Enviar solicitud a una publicacion. |
-| `GET` | `/api/publications/{id}/requests` | JWT/autor | Revisar solicitudes recibidas. |
-| `PATCH` | `/api/request-publications/{id}/accept` | JWT/autor | Aceptar solicitud y crear viaje. |
-| `PATCH` | `/api/request-publications/{id}/reject` | JWT/autor | Rechazar solicitud. |
-| `PATCH` | `/api/request-publications/{id}/cancel` | JWT/requester | Cancelar solicitud. |
-| `GET` | `/api/rides` | JWT | Consultar viajes. |
-| `GET` | `/api/ride-passengers` | JWT | Consultar pasajeros confirmados. |
-| `POST` | `/api/reviews` | JWT | Calificar participante despues del viaje. |
-| `GET` | `/api/reviews` | JWT | Consultar reviews. |
+| `POST` | `/api/auth/register` | Registra un estudiante | Publico |
+| `POST` | `/api/auth/login` | Inicia sesion y retorna tokens | Publico |
+| `POST` | `/api/auth/refresh` | Renueva el access token | Publico |
+| `GET` | `/api/publications` | Lista publicaciones disponibles | Publico |
+| `POST` | `/api/publications` | Crea una publicacion | Autenticado |
+| `POST` | `/api/vehicles` | Registra un vehiculo propio | Autenticado |
+| `POST` | `/api/request-publications` | Crea una solicitud | Autenticado |
+| `PATCH` | `/api/request-publications/{id}/accept` | Acepta una solicitud | Autor de la publicacion |
+| `GET` | `/api/rides` | Consulta viajes confirmados | Autenticado |
+| `POST` | `/api/reviews` | Califica a un participante del viaje | Autenticado |
+| `GET` | `/api/users/me` | Consulta el perfil y rating propios | Autenticado |
+| `GET` | `/api/users/{id}` | Consulta el usuario y su rating calculado | Administrador |
 
-## Configuracion Local
+Las rutas de viajes y pasajeros se utilizan para consulta del flujo confirmado. La creacion de estas entidades ocurre durante la aceptacion de solicitudes.
+
+## Integracion Con Google Maps
+
+La aplicacion incluye un servicio para obtener informacion geografica necesaria para las publicaciones y los viajes. La clave de Google Maps se configura mediante variable de entorno para evitar que una credencial privada sea almacenada en el repositorio.
+
+```powershell
+$env:GOOGLE_MAPS_API_KEY="TU_CLAVE_DE_GOOGLE_MAPS"
+```
+
+Para la demostracion se debe utilizar una clave valida habilitada para las APIs requeridas por el equipo y restringida segun las recomendaciones de Google Cloud.
+
+## Ejecucion Local
 
 ### Requisitos
 
 - Java 17 o superior.
-- Docker Desktop activo para ejecutar los tests con PostgreSQL Testcontainers.
-- PostgreSQL disponible si se desea iniciar la aplicacion local fuera de pruebas.
+- Docker Desktop en ejecucion.
+- PowerShell en Windows.
+- Postman para probar el flujo de la API.
 
-### Variables De Entorno
+### 1. Levantar PostgreSQL Con Docker
 
-No se deben commitear claves ni passwords. Para desarrollo se pueden definir variables en PowerShell antes de iniciar la aplicacion:
+El siguiente comando crea una base PostgreSQL local en el puerto `5433`, evitando conflictos con una instalacion local que ya utilice `5432`.
 
 ```powershell
-$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/carpool"
-$env:SPRING_DATASOURCE_USERNAME="postgres"
-$env:SPRING_DATASOURCE_PASSWORD="TU_PASSWORD_LOCAL"
+docker run --name carpool-postgres `
+  -e POSTGRES_DB=carpool `
+  -e POSTGRES_USER=carpool `
+  -e POSTGRES_PASSWORD=carpool123 `
+  -p 5433:5432 `
+  -d postgres:16-alpine
+```
+
+Si el contenedor ya fue creado previamente, basta iniciarlo:
+
+```powershell
+docker start carpool-postgres
+```
+
+### 2. Configurar Variables Y Ejecutar La API
+
+Desde la carpeta raiz del proyecto:
+
+```powershell
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5433/carpool"
+$env:SPRING_DATASOURCE_USERNAME="carpool"
+$env:SPRING_DATASOURCE_PASSWORD="carpool123"
 $env:SPRING_JPA_HIBERNATE_DDL_AUTO="update"
-$env:APP_JWT_SECRET="TU_SECRET_BASE64_SEGURO"
-$env:GOOGLE_MAPS_API_KEY="TU_GOOGLE_MAPS_API_KEY"
+$env:APP_JWT_SECRET="Q2hhbmdlVGhpc0RlZmF1bHRTZWNyZXRLZXlGb3JKV1RTaWduaW5nU2xpY2Uy"
 $env:CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
+$env:GOOGLE_MAPS_API_KEY="TU_CLAVE_DE_GOOGLE_MAPS"
 .\mvnw.cmd spring-boot:run
 ```
 
-| Variable | Uso | Obligatoria |
-| --- | --- | --- |
-| `SPRING_DATASOURCE_URL` | Conexion PostgreSQL para ejecutar la app. | Si se inicia localmente o en produccion. |
-| `SPRING_DATASOURCE_USERNAME` | Usuario de base de datos. | Si se inicia la app. |
-| `SPRING_DATASOURCE_PASSWORD` | Password de base de datos. | Si se inicia la app. |
-| `APP_JWT_SECRET` | Firma de tokens JWT en Base64. | Requerida en produccion. |
-| `GOOGLE_MAPS_API_KEY` | Geocodificacion/distancias. | Requerida para Google Maps real. |
-| `CORS_ORIGINS` | Origenes permitidos para frontend. | Requerida al desplegar frontend. |
-| `APP_MAIL_FROM` | Remitente de emails. | Opcional, junto con SMTP. |
+La API quedara disponible en:
 
-## Google Maps
+```text
+http://localhost:8080
+```
 
-La API utiliza Google Maps de manera configurable:
+Las credenciales mostradas corresponden unicamente al entorno local de demostracion. Las claves y contrasenas de produccion deben proporcionarse mediante variables seguras y no deben subirse al repositorio.
 
-- Si se proporciona `GOOGLE_MAPS_API_KEY`, las direcciones de publicaciones y solicitudes pueden convertirse en coordenadas y calcular distancia hacia UTEC.
-- Si no hay clave configurada, la aplicacion sigue funcionando sin exponer secretos.
-- La clave debe almacenarse como variable de entorno local o secreto de despliegue.
+## Pruebas Automatizadas
 
-**[PENDIENTE PARA ENTREGA]** Agregar evidencia de una llamada exitosa a Google Maps o una captura de Postman sin mostrar la clave.
-
-## Testing
-
-Los tests usan PostgreSQL real dentro de Docker mediante Testcontainers. Con Docker Desktop abierto:
+El proyecto utiliza PostgreSQL mediante Testcontainers, por lo que Docker Desktop debe estar activo para ejecutar la suite completa.
 
 ```powershell
 .\mvnw.cmd test
 ```
 
-Ultima validacion local realizada en esta rama:
+La ultima ejecucion realizada en la rama `CARPOOL-UTEC-VF` obtuvo el siguiente resultado:
 
 ```text
 Tests run: 200, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
 ```
 
-La suite cubre repositorios, servicios, controladores, JWT/security, reglas de vehiculos/publicaciones, aceptacion de solicitudes, reviews y configuracion de Google Maps.
+Las pruebas cubren repositorios, servicios, controladores, autenticacion, reglas de solicitudes y validaciones del flujo principal.
 
-## Postman
+## Pruebas Con Postman
 
-El archivo [`postman_collection.json`](./postman_collection.json) contiene solicitudes preparadas para validar el flujo principal:
+El repositorio contiene el archivo `postman_collection.json`, que puede importarse directamente en Postman. La coleccion organiza las solicitudes necesarias para comprobar el recorrido principal:
 
-1. Registrar e iniciar sesion como conductor.
-2. Registrar e iniciar sesion como pasajero.
-3. Crear vehiculo del conductor.
-4. Crear publicacion del conductor usando su vehiculo.
-5. Crear solicitud como pasajero.
-6. Aceptar la solicitud como conductor.
-7. Consultar el viaje creado.
-8. Crear reviews cuando el viaje ya haya ocurrido.
-9. Verificar que endpoints sensibles sin JWT respondan `401` y que no se permita crear rides manualmente.
+1. Registrar un conductor y un pasajero.
+2. Iniciar sesion con ambos usuarios.
+3. Crear el vehiculo del conductor.
+4. Crear una publicacion como conductor.
+5. Crear una solicitud como pasajero.
+6. Aceptar la solicitud con el token del conductor.
+7. Consultar el viaje y sus pasajeros confirmados.
+8. Registrar una review luego del viaje.
+9. Consultar el rating actualizado del conductor con su propio perfil.
+10. Verificar que rutas protegidas rechazan solicitudes sin token.
 
-La coleccion guarda automaticamente tokens e identificadores (`driverToken`, `passengerToken`, `vehicleId`, `publicationId`, `requestId` y `rideId`). Para probar en AWS, solo sera necesario reemplazar la variable `baseUrl`.
+La variable `baseUrl` debe apuntar a `http://localhost:8080` durante pruebas locales. Una vez desplegada la aplicacion, se reemplazara por la URL publica del servicio.
 
-Para ejecutar el recorrido completo varias veces, use una base de datos limpia o actualice las variables con recursos existentes. Esto es esperado: el backend impide solicitudes duplicadas activas y limita la cantidad de vehiculos por usuario.
+## Despliegue En AWS
 
-## Deployment AWS
+El despliegue final se realizara en AWS siguiendo la guia del laboratorio del curso, utilizando una base PostgreSQL administrada y un servicio accesible para la evaluacion. Esta seccion se completara con los datos finales una vez que los recursos hayan sido creados y probados.
 
-**Estado: [PENDIENTE DE IMPLEMENTAR Y DOCUMENTAR]**
-
-Segun el requerimiento del curso, el deployment final debera realizarse en AWS. Esta seccion debe completarse despues de tener infraestructura real y una URL verificable.
-
-| Elemento AWS | Valor final |
+| Campo | Informacion De Entrega |
 | --- | --- |
-| Region | `us-east-1` |
-| ECR Repository | **[PENDIENTE]** |
-| ECS Cluster / Service | **[PENDIENTE]** |
-| RDS PostgreSQL endpoint privado | **[PENDIENTE - no publicar password]** |
-| Application Load Balancer DNS | **[PENDIENTE]** |
-| URL publica del backend | **[PENDIENTE]** |
-| Health endpoint | **[PENDIENTE: implementar y verificar `/actuator/health`]** |
+| Region AWS | `us-east-1` |
+| Servicio backend | [Completar al desplegar] |
+| Base de datos RDS | [Completar al desplegar] |
+| URL publica de la API | [Completar al desplegar] |
+| Endpoint de verificacion | [Completar al desplegar] |
 
-### Evidencias AWS Por Agregar
+### Evidencias De Despliegue
 
-- **[PENDIENTE]** Captura de imagen subida a ECR.
-- **[PENDIENTE]** Captura de tarea ECS en estado `RUNNING`.
-- **[PENDIENTE]** Captura de target healthy en el Load Balancer.
-- **[PENDIENTE]** Captura de RDS configurado sin mostrar credenciales.
-- **[PENDIENTE]** Captura de Postman consumiendo la URL publica.
-- **[PENDIENTE]** Instrucciones para apagar o eliminar recursos al finalizar la evaluacion.
-
-## Equipo Y Evidencias Academicas
-
-| Campo | Informacion |
+| Evidencia | Referencia |
 | --- | --- |
-| Curso | Desarrollo Basado en Plataformas - CS 2031 |
-| Proyecto | Carpool UTEC |
-| Integrantes | **[PENDIENTE: agregar nombres y codigos]** |
-| Docente / Seccion | **[PENDIENTE]** |
-| Repositorio GitHub | **[PENDIENTE: colocar URL de la rama entregada]** |
-| Video o demo | **[PENDIENTE, si la entrega lo solicita]** |
-| Diagrama ER / arquitectura | **[PENDIENTE: insertar enlace o imagen]** |
+| Servicio ejecutandose en AWS | [Agregar captura o enlace] |
+| Conexion con la base de datos | [Agregar captura o enlace] |
+| Prueba de endpoint publico | [Agregar captura o enlace] |
+| Logs del servicio | [Agregar captura o enlace] |
 
-## Trabajo Pendiente Antes De Entrega
+## Material Complementario
 
-- Hacer commit y push de la rama revisada con los cambios de logica.
-- Configurar y desplegar AWS con PostgreSQL RDS y URL publica.
-- Implementar healthcheck requerido para evidenciar disponibilidad en AWS.
-- Ejecutar la coleccion Postman contra la URL desplegada.
-- Completar esta documentacion con integrantes, enlaces, capturas y conclusiones finales.
+| Elemento | Referencia |
+| --- | --- |
+| Diagrama entidad-relacion | [Agregar archivo o enlace] |
+| Diagrama de arquitectura | [Agregar archivo o enlace] |
+| Evidencia de pruebas Postman | [Agregar archivo o enlace] |
+| Presentacion final | [Agregar archivo o enlace] |
