@@ -1,0 +1,59 @@
+{
+  "family": "backend-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::375170594920:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::375170594920:role/carpultec-api-task-role",
+  "containerDefinitions": [
+    {
+      "name": "backend-task",
+      "image": "375170594920.dkr.ecr.us-east-2.amazonaws.com/carpultec-api:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "PORT",
+          "value": "8080"
+        },
+        {
+          "name": "SPRING_JPA_HIBERNATE_DDL_AUTO",
+          "value": "update"
+        },
+        {
+          "name": "JAVA_OPTS",
+          "value": "-XX:MaxRAMPercentage=75"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "SPRING_DATASOURCE_URL",
+          "valueFrom": "arn:aws:ssm:us-east-2:375170594920:parameter/carpultec/prod/spring-datasource-url"
+        },
+        {
+          "name": "SPRING_DATASOURCE_USERNAME",
+          "valueFrom": "arn:aws:ssm:us-east-2:375170594920:parameter/carpultec/prod/spring-datasource-username"
+        },
+        {
+          "name": "SPRING_DATASOURCE_PASSWORD",
+          "valueFrom": "arn:aws:ssm:us-east-2:375170594920:parameter/carpultec/prod/spring-datasource-password"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/backend-task",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
