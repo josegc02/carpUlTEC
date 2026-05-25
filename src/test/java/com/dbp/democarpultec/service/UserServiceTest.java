@@ -35,7 +35,6 @@ public class UserServiceTest {
                 .studentCode("U202410032")
                 .career(Carreras.Ciencia_de_la_Computacion)
                 .cycle(6)
-                .rating(4.5)
                 .build();
 
         User savedUser = new User();
@@ -102,7 +101,6 @@ public class UserServiceTest {
                 .studentCode("U202520034")
                 .career(Carreras.Ciencia_de_Datos)
                 .cycle(7)
-                .rating(4.0)
                 .build();
 
         User existing = new User();

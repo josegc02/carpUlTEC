@@ -48,6 +48,11 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id " + id));
     }
 
+    public User findEntityByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("User not found with email " + email));
+    }
+
     private void updateEntity(User user, UserRequestDto dto) {
         user.setName(dto.getName());
         user.setLastName(dto.getLastName());
@@ -56,7 +61,12 @@ public class UserService {
         user.setStudentCode(dto.getStudentCode());
         user.setCareer(dto.getCareer());
         user.setCycle(dto.getCycle());
-        user.setRating(dto.getRating());
+    }
+
+    public void updateRating(Long userId, Double rating) {
+        User user = findEntityById(userId);
+        user.setRating(rating);
+        userRepository.save(user);
     }
 
     private UserResponseDto toResponseDto(User user) {
@@ -70,6 +80,7 @@ public class UserService {
                 .career(user.getCareer())
                 .cycle(user.getCycle())
                 .rating(user.getRating())
+                .role(user.getRole())
                 .build();
     }
 }

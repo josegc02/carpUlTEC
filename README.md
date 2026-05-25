@@ -1,96 +1,220 @@
-# CarpUlTEC
+# Carpool UTEC
 
-CarpUlTEC es una API REST construida con Spring Boot para gestionar usuarios, vehiculos, publicaciones, viajes, pasajeros, solicitudes y resenas dentro de una aplicacion de carpooling universitario.
+API REST para coordinar viajes compartidos entre estudiantes de la Universidad de Ingenieria y Tecnologia (UTEC). El proyecto busca facilitar que los estudiantes que se movilizan hacia o desde el campus puedan ofrecer asientos disponibles o solicitar un traslado, manteniendo un registro de solicitudes, viajes confirmados y calificaciones.
 
-## Tecnologias
+## Informacion Del Proyecto
 
-- Java 17
-- Spring Boot 3.4.5
-- Spring Web
-- Spring Data JPA
-- Spring Validation
-- PostgreSQL
-- Lombok
-- JUnit 5
-- Testcontainers
-- Maven Wrapper
+| Campo | Detalle |
+| --- | --- |
+| Curso | Desarrollo Basado en Plataformas - CS 2031 |
+| Periodo | 2026-1 |
+| Proyecto | Carpool UTEC |
+| Backend | Spring Boot |
+| Repositorio de entrega | [CARPOOL-UTEC-VF](https://github.com/josegc02/carpUlTEC/tree/CARPOOL-UTEC-VF) |
 
-## Estructura principal
+### Integrantes
+
+| Nombre | Codigo |
+| --- | --- |
+| [Agregar integrante] | [Agregar codigo] |
+| [Agregar integrante] | [Agregar codigo] |
+| [Agregar integrante] | [Agregar codigo] |
+
+## Problema Que Atiende
+
+El transporte hacia la universidad puede ser costoso o poco practico, especialmente en horarios de alta demanda. Al mismo tiempo, algunos estudiantes llegan en auto y pueden disponer de asientos libres. Carpool UTEC propone un canal organizado para vincular ambos casos dentro de una comunidad universitaria identificable mediante su correo institucional.
+
+La aplicacion no considera que un estudiante sea siempre conductor o siempre pasajero. Un mismo usuario puede ofrecer un viaje en una ocasion y solicitar movilidad en otra, dependiendo de su necesidad y de si dispone de un vehiculo registrado.
+
+## Funcionalidades Principales
+
+- Registro de estudiantes utilizando correo institucional `@utec.edu.pe`.
+- Inicio de sesion mediante JWT y refresh token.
+- Registro de vehiculos propios para usuarios que desean conducir.
+- Creacion de publicaciones para ofrecer asientos o buscar un conductor.
+- Solicitudes entre usuarios con validacion del tipo de publicacion.
+- Confirmacion de solicitudes y generacion del viaje correspondiente.
+- Registro de pasajeros confirmados dentro del viaje.
+- Calificaciones entre participantes luego de un viaje.
+- Consulta de rutas y ubicaciones mediante integracion configurable con Google Maps.
+- Notificaciones asociadas al registro y a cambios relevantes de solicitudes.
+
+## Flujo Principal Del Sistema
+
+1. Un estudiante se registra con su correo UTEC e inicia sesion.
+2. Si desea ofrecer transporte, registra un vehiculo propio indicando su capacidad.
+3. El usuario crea una publicacion:
+   - Como conductor, publica asientos disponibles y selecciona uno de sus vehiculos.
+   - Como pasajero, publica la cantidad de asientos que necesita.
+4. Otro estudiante responde a la publicacion con una solicitud compatible:
+   - Una publicacion de conductor recibe solicitudes de pasajeros.
+   - Una publicacion de pasajero recibe solicitudes de conductores.
+5. El autor de la publicacion revisa sus solicitudes recibidas y acepta o rechaza una solicitud pendiente.
+6. Al aceptar, el backend identifica al conductor, al pasajero y al vehiculo correspondiente, y crea el viaje confirmado.
+7. Los participantes pueden consultar el viaje generado.
+8. Una vez realizado el viaje, los participantes pueden registrar una calificacion sobre la otra persona.
+
+El viaje no se crea manualmente desde un formulario publico. Su creacion se produce a partir de una solicitud aceptada, de forma que siempre exista relacion entre publicacion, solicitud y participantes.
+
+## Modelo De Datos
+
+| Entidad | Responsabilidad |
+| --- | --- |
+| `User` | Representa al estudiante registrado, sus credenciales, rol del sistema y rating calculado. |
+| `Vehicle` | Vehiculo perteneciente a un usuario, utilizado cuando participa como conductor. |
+| `Publication` | Publicacion de un estudiante que ofrece asientos o solicita transporte. |
+| `RequestPublication` | Solicitud realizada sobre una publicacion y su estado de aprobacion. |
+| `Ride` | Viaje confirmado despues de aceptar una solicitud valida. |
+| `RidePassenger` | Relacion entre el viaje confirmado y el pasajero participante. |
+| `Review` | Calificacion realizada entre participantes de un viaje concluido. |
+
+Las entidades se relacionan mediante JPA para conservar la trazabilidad del flujo: usuario, vehiculo, publicacion, solicitud, viaje y review.
+
+## Reglas De Negocio
+
+### Usuarios Y Seguridad
+
+- El registro admite correos con dominio institucional `@utec.edu.pe`.
+- Las contrasenas se almacenan codificadas con BCrypt.
+- La autenticacion genera access token y refresh token.
+- Los roles del sistema son `USER` y `ADMIN`.
+- Ser conductor o pasajero depende de cada viaje y no de un rol permanente.
+- Para crear recursos sensibles, el backend obtiene al usuario desde el JWT y no confia en identificadores enviados desde el body.
+
+### Vehiculos Y Publicaciones
+
+- Cada vehiculo queda asociado al usuario autenticado que lo registra.
+- Solo el propietario puede modificar o eliminar su vehiculo.
+- Para publicar como conductor, el usuario debe utilizar un vehiculo propio.
+- Los asientos ofrecidos no pueden superar la capacidad del vehiculo.
+- Una publicacion de pasajero no asigna vehiculo, porque el conductor se determinara al recibir una solicitud valida.
+
+### Solicitudes Y Cupos
+
+- Un usuario no puede solicitar su propia publicacion.
+- Una solicitud debe tener el sentido opuesto al de la publicacion original.
+- El conductor que responde a una publicacion debe contar con vehiculo valido.
+- Solo se pueden aceptar, rechazar o cancelar solicitudes que se encuentren pendientes.
+- El solicitante puede cancelar su solicitud y el autor de la publicacion puede aceptar o rechazar solicitudes recibidas.
+- Al aceptar se verifican nuevamente los cupos disponibles y la capacidad del vehiculo, evitando confirmar viajes incompatibles.
+
+### Reviews Y Rating
+
+- Una review solo puede ser registrada por un usuario autenticado que participo en el viaje.
+- No se permite calificarse a uno mismo ni calificar a una persona ajena al viaje.
+- No se permite registrar dos veces la misma calificacion para el mismo viaje y participante.
+- El rating mostrado para un usuario se obtiene de sus reviews y no es un valor que el usuario pueda asignarse directamente.
+
+## Arquitectura Del Backend
+
+El backend esta organizado en capas con responsabilidades separadas:
 
 ```text
-src/main/java/com/dbp/democarpultec
-├── controller
-├── dto
-├── exception
-├── model
-├── repository
-└── service
+controller -> service -> repository -> model
+                     -> dto
+                     -> exception
 ```
 
-## Endpoints principales
+- `controller`: expone los endpoints HTTP y recibe las solicitudes.
+- `service`: concentra la logica del flujo de carpool y sus validaciones.
+- `repository`: realiza la persistencia mediante Spring Data JPA.
+- `model`: contiene las entidades del dominio.
+- `dto`: define los objetos de entrada y respuesta expuestos por la API.
+- `exception`: centraliza errores de negocio y respuestas consistentes.
+- `security`: configura autenticacion JWT y acceso a rutas protegidas.
 
-La API expone recursos REST bajo el prefijo `/api`:
+## Tecnologias Utilizadas
 
-- `/api/users`
-- `/api/vehicles`
-- `/api/rides`
-- `/api/ride-passengers`
-- `/api/reviews`
-- `/api/publications`
-- `/api/request-publications`
+| Tecnologia | Uso En El Proyecto |
+| --- | --- |
+| Java 17+ | Lenguaje de desarrollo |
+| Spring Boot | Construccion de la API REST |
+| Spring Data JPA | Acceso y persistencia de datos |
+| PostgreSQL | Base de datos relacional |
+| Spring Security | Autenticacion y autorizacion |
+| JWT | Tokens de acceso para endpoints protegidos |
+| BCrypt | Proteccion de contrasenas |
+| Testcontainers | Base PostgreSQL aislada para pruebas |
+| JUnit y Mockito | Pruebas automatizadas |
+| Google Maps API | Consulta de rutas y coordenadas |
+| JavaMailSender | Envio de correos y notificaciones |
+| Docker | Ejecucion local de PostgreSQL y preparacion para despliegue |
 
-Cada controlador incluye operaciones CRUD basicas usando metodos `GET`, `POST`, `PUT` y `DELETE`.
+## Endpoints Principales
 
-## Requisitos
+| Metodo | Ruta | Descripcion | Acceso |
+| --- | --- | --- | --- |
+| `POST` | `/api/auth/register` | Registra un estudiante | Publico |
+| `POST` | `/api/auth/login` | Inicia sesion y retorna tokens | Publico |
+| `POST` | `/api/auth/refresh` | Renueva el access token | Publico |
+| `GET` | `/api/publications` | Lista publicaciones disponibles | Publico |
+| `POST` | `/api/publications` | Crea una publicacion | Autenticado |
+| `POST` | `/api/vehicles` | Registra un vehiculo propio | Autenticado |
+| `POST` | `/api/request-publications` | Crea una solicitud | Autenticado |
+| `PATCH` | `/api/request-publications/{id}/accept` | Acepta una solicitud | Autor de la publicacion |
+| `GET` | `/api/rides` | Consulta viajes confirmados | Autenticado |
+| `POST` | `/api/reviews` | Califica a un participante del viaje | Autenticado |
+| `GET` | `/api/users/me` | Consulta el perfil y rating propios | Autenticado |
+| `GET` | `/api/users/{id}` | Consulta el usuario y su rating calculado | Administrador |
 
-- JDK 17 instalado
-- Docker instalado y en ejecucion para pruebas con Testcontainers
-- PostgreSQL configurado si se desea ejecutar la aplicacion con una base de datos local
+Las rutas de viajes y pasajeros se utilizan para consulta del flujo confirmado. La creacion de estas entidades ocurre durante la aceptacion de solicitudes.
 
-## Ejecutar el proyecto
+## Integracion Con Google Maps
 
-En Windows:
+La aplicacion incluye un servicio para obtener informacion geografica necesaria para las publicaciones y los viajes. La clave de Google Maps se configura mediante variable de entorno para evitar que una credencial privada sea almacenada en el repositorio.
 
-```bash
-mvnw.cmd spring-boot:run
+```powershell
+$env:GOOGLE_MAPS_API_KEY="TU_CLAVE_DE_GOOGLE_MAPS"
 ```
 
-En macOS/Linux:
+Para la demostracion se debe utilizar una clave valida habilitada para las APIs requeridas por el equipo y restringida segun las recomendaciones de Google Cloud.
 
-```bash
-./mvnw spring-boot:run
+## Ejecucion Local
+
+### Requisitos
+
+- Java 17 o superior.
+- Docker Desktop en ejecucion.
+- PowerShell en Windows.
+- Postman para probar el flujo de la API.
+
+### 1. Levantar PostgreSQL Con Docker
+
+El siguiente comando crea una base PostgreSQL local en el puerto `5433`, evitando conflictos con una instalacion local que ya utilice `5432`.
+
+```powershell
+docker run --name carpool-postgres `
+  -e POSTGRES_DB=carpool `
+  -e POSTGRES_USER=carpool `
+  -e POSTGRES_PASSWORD=carpool123 `
+  -p 5433:5432 `
+  -d postgres:16-alpine
 ```
 
-Por defecto, la aplicacion inicia en:
+Si el contenedor ya fue creado previamente, basta iniciarlo:
+
+```powershell
+docker start carpool-postgres
+```
+
+### 2. Configurar Variables Y Ejecutar La API
+
+Desde la carpeta raiz del proyecto:
+
+```powershell
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5433/carpool"
+$env:SPRING_DATASOURCE_USERNAME="carpool"
+$env:SPRING_DATASOURCE_PASSWORD="carpool123"
+$env:SPRING_JPA_HIBERNATE_DDL_AUTO="update"
+$env:APP_JWT_SECRET="Q2hhbmdlVGhpc0RlZmF1bHRTZWNyZXRLZXlGb3JKV1RTaWduaW5nU2xpY2Uy"
+$env:CORS_ORIGINS="http://localhost:3000,http://localhost:5173"
+$env:GOOGLE_MAPS_API_KEY="TU_CLAVE_DE_GOOGLE_MAPS"
+.\mvnw.cmd spring-boot:run
+```
+
+La API quedara disponible en:
 
 ```text
 http://localhost:8080
 ```
 
-## Ejecutar pruebas
-
-En Windows:
-
-```bash
-mvnw.cmd test
-```
-
-En macOS/Linux:
-
-```bash
-./mvnw test
-```
-
-## Configuracion
-
-La configuracion base se encuentra en:
-
-```text
-src/main/resources/application.properties
-```
-
-Actualmente contiene el nombre de la aplicacion:
-
-```properties
-spring.application.name=demoCarpultec
-```

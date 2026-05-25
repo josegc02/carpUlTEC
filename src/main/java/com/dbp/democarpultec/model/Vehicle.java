@@ -23,7 +23,7 @@ public class Vehicle {
 
     // Dueño del vehículo
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 

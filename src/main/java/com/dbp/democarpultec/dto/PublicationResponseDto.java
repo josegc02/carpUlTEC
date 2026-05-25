@@ -20,7 +20,11 @@ public class PublicationResponseDto {
     private String titulo;
     private String descripcion;
     private String destinationOrOrigin;
+    private Double externalLatitude;
+    private Double externalLongitude;
+    private Double distanceToUtecKm;
     private LocalDateTime departureTime;
     private Long authorId;
+    private Long vehicleId;
     private Long rideId;
 }

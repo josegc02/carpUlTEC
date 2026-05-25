@@ -1,7 +1,11 @@
 package com.dbp.democarpultec.dto;
 
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,10 +17,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RequestPublicationRequestDto {
 
-    @NotNull
     private Long publicationId;
 
-    @NotNull
     private Long requesterId;
 
     @NotNull
@@ -26,7 +28,18 @@ public class RequestPublicationRequestDto {
     @Min(1)
     private Integer seats;
 
+    @Size(max = 500)
     private String message;
+
+    @NotBlank
+    @Size(max = 120)
     private String pickupPointOrDestine;
-    private String status;
+
+    @DecimalMin(value = "-90.0")
+    @DecimalMax(value = "90.0")
+    private Double externalLatitude;
+
+    @DecimalMin(value = "-180.0")
+    @DecimalMax(value = "180.0")
+    private Double externalLongitude;
 }

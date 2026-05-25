@@ -1,12 +1,8 @@
 package com.dbp.democarpultec.controller;
 
-import com.dbp.democarpultec.dto.RidePassengerRequestDto;
 import com.dbp.democarpultec.dto.RidePassengerResponseDto;
 import com.dbp.democarpultec.service.RidePassengerService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,19 +24,4 @@ public class RidePassengerController {
         return ridePassengerService.findById(id);
     }
 
-    @PostMapping
-    public ResponseEntity<RidePassengerResponseDto> create(@Valid @RequestBody RidePassengerRequestDto ridePassenger) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(ridePassengerService.create(ridePassenger));
-    }
-
-    @PutMapping("/{id}")
-    public RidePassengerResponseDto update(@PathVariable Long id, @Valid @RequestBody RidePassengerRequestDto ridePassenger) {
-        return ridePassengerService.update(id, ridePassenger);
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        ridePassengerService.delete(id);
-        return ResponseEntity.noContent().build();
-    }
 }

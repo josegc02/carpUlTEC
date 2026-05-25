@@ -2,6 +2,8 @@ package com.dbp.democarpultec.service;
 
 import com.dbp.democarpultec.dto.VehicleRequestDto;
 import com.dbp.democarpultec.dto.VehicleResponseDto;
+import com.dbp.democarpultec.exception.BusinessRuleException;
+import com.dbp.democarpultec.exception.ForbiddenException;
 import com.dbp.democarpultec.model.User;
 import com.dbp.democarpultec.model.Vehicle;
 import com.dbp.democarpultec.repository.VehicleRepository;
@@ -31,7 +33,6 @@ public class VehicleServiceTest {
     @Test
     void shouldCreateVehicleWhenValidData(){
         VehicleRequestDto dto = VehicleRequestDto.builder()
-                .ownerId(1L)
                 .plate("ABC-123")
                 .brand("Toyota")
                 .model("Corolla")
@@ -55,7 +56,7 @@ public class VehicleServiceTest {
         when(userService.findEntityById(1L)).thenReturn(owner);
         when(vehicleRepository.save(any(Vehicle.class))).thenReturn(savedVehicle);
 
-        VehicleResponseDto result = vehicleService.create(dto);
+        VehicleResponseDto result = vehicleService.createAuthenticated(1L, dto);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());
@@ -110,7 +111,6 @@ public class VehicleServiceTest {
     @Test
     void shouldUpdateVehicleWhenValidData(){
         VehicleRequestDto dto = VehicleRequestDto.builder()
-                .ownerId(1L)
                 .plate("XYZ-999")
                 .brand("Honda")
                 .model("Civic")
@@ -124,6 +124,7 @@ public class VehicleServiceTest {
 
         Vehicle existingVehicle = new Vehicle();
         existingVehicle.setId(1L);
+        existingVehicle.setOwner(owner);
         existingVehicle.setPlate("OLD-123");
         existingVehicle.setBrand("Toyota");
 
@@ -137,10 +138,9 @@ public class VehicleServiceTest {
         updatedVehicle.setSeats(5);
 
         when(vehicleRepository.findById(1L)).thenReturn(Optional.of(existingVehicle));
-        when(userService.findEntityById(1L)).thenReturn(owner);
         when(vehicleRepository.save(any(Vehicle.class))).thenReturn(updatedVehicle);
 
-        VehicleResponseDto result = vehicleService.update(1L, dto);
+        VehicleResponseDto result = vehicleService.updateAuthenticated(1L, 1L, dto);
 
         assertNotNull(result);
         assertEquals("XYZ-999", result.getPlate());
@@ -149,15 +149,51 @@ public class VehicleServiceTest {
         assertEquals(5, result.getSeats());
 
         verify(vehicleRepository).findById(1L);
-        verify(userService).findEntityById(1L);
         verify(vehicleRepository).save(any(Vehicle.class));
     }
 
     @Test
     void shouldDeleteVehicleWhenVehicleExists(){
-        when(vehicleRepository.existsById(1L)).thenReturn(true);
-        vehicleService.delete(1L);
-        verify(vehicleRepository).existsById(1L);
+        User owner = new User();
+        owner.setId(1L);
+        Vehicle vehicle = new Vehicle();
+        vehicle.setOwner(owner);
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+        vehicleService.deleteAuthenticated(1L, 1L);
         verify(vehicleRepository).deleteById(1L);
+    }
+
+    @Test
+    void shouldRejectThirdVehicleForSameOwner() {
+        VehicleRequestDto dto = VehicleRequestDto.builder()
+                .plate("ABC-123")
+                .brand("Toyota")
+                .model("Corolla")
+                .seats(4)
+                .build();
+
+        when(vehicleRepository.countByOwner_Id(1L)).thenReturn(2L);
+
+        assertThrows(BusinessRuleException.class, () -> vehicleService.createAuthenticated(1L, dto));
+        verify(vehicleRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectUpdateWhenVehicleBelongsToAnotherUser() {
+        User owner = new User();
+        owner.setId(2L);
+        Vehicle vehicle = new Vehicle();
+        vehicle.setOwner(owner);
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+
+        VehicleRequestDto dto = VehicleRequestDto.builder()
+                .plate("ABC-123")
+                .brand("Toyota")
+                .model("Corolla")
+                .seats(4)
+                .build();
+
+        assertThrows(ForbiddenException.class, () -> vehicleService.updateAuthenticated(1L, 1L, dto));
+        verify(vehicleRepository, never()).save(any());
     }
 }

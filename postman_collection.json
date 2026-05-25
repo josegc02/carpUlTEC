@@ -1,0 +1,606 @@
+{
+  "info": {
+    "_postman_id": "79944f94-b058-4568-846a-5500e7a10abd",
+    "name": "Carpool UTEC - Flujo Backend",
+    "description": "Coleccion para probar el backend Carpool UTEC. Orden sugerido: autenticacion de conductor y pasajero, vehiculo, publicacion, solicitud, aceptacion, consulta de ride y reviews. Para AWS solo cambie la variable baseUrl.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "driverEmail",
+      "value": "conductor.postman@utec.edu.pe"
+    },
+    {
+      "key": "passengerEmail",
+      "value": "pasajero.postman@utec.edu.pe"
+    },
+    {
+      "key": "password",
+      "value": "Password123"
+    },
+    {
+      "key": "driverToken",
+      "value": ""
+    },
+    {
+      "key": "driverRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "passengerToken",
+      "value": ""
+    },
+    {
+      "key": "driverId",
+      "value": ""
+    },
+    {
+      "key": "passengerId",
+      "value": ""
+    },
+    {
+      "key": "vehicleId",
+      "value": ""
+    },
+    {
+      "key": "publicationId",
+      "value": ""
+    },
+    {
+      "key": "requestId",
+      "value": ""
+    },
+    {
+      "key": "rideId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Autenticacion",
+      "item": [
+        {
+          "name": "Registrar conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Daniel\",\n  \"lastName\": \"Conductor\",\n  \"email\": \"{{driverEmail}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"900000001\",\n  \"studentCode\": \"U202600001\",\n  \"career\": \"Ciencia_de_la_Computacion\",\n  \"cycle\": 3\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Registrar una vez. Si el usuario ya existe, ejecute Login conductor."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registro devuelve 201 o usuario ya registrado', function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('driverToken', response.accessToken);",
+                  "    pm.collectionVariables.set('driverRefreshToken', response.refreshToken);",
+                  "    pm.collectionVariables.set('driverId', response.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{driverEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login conductor exitoso', function () { pm.response.to.have.status(200); });",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('driverToken', response.accessToken);",
+                  "pm.collectionVariables.set('driverRefreshToken', response.refreshToken);",
+                  "pm.collectionVariables.set('driverId', response.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar pasajero",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Paola\",\n  \"lastName\": \"Pasajera\",\n  \"email\": \"{{passengerEmail}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"900000002\",\n  \"studentCode\": \"U202600002\",\n  \"career\": \"Ciencia_de_Datos\",\n  \"cycle\": 3\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "Registrar una vez. Si el usuario ya existe, ejecute Login pasajero."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registro devuelve 201 o usuario ya registrado', function () {",
+                  "    pm.expect([201, 409]).to.include(pm.response.code);",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('passengerToken', response.accessToken);",
+                  "    pm.collectionVariables.set('passengerId', response.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login pasajero",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{passengerEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login pasajero exitoso', function () { pm.response.to.have.status(200); });",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('passengerToken', response.accessToken);",
+                  "pm.collectionVariables.set('passengerId', response.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh token conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{driverRefreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/refresh"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Refresh exitoso', function () { pm.response.to.have.status(200); });",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('driverToken', response.accessToken);",
+                  "pm.collectionVariables.set('driverRefreshToken', response.refreshToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Usuario Y Vehiculo",
+      "item": [
+        {
+          "name": "Mi perfil conductor",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/me"
+          }
+        },
+        {
+          "name": "Crear vehiculo propio del conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"UTP-101\",\n  \"brand\": \"Toyota\",\n  \"model\": \"Yaris\",\n  \"color\": \"Plata\",\n  \"seats\": 4\n}"
+            },
+            "url": "{{baseUrl}}/api/vehicles",
+            "description": "No contiene ownerId: el owner se obtiene del JWT del conductor."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Vehiculo creado para usuario autenticado', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('vehicleId', response.id);",
+                  "    pm.test('Owner es el conductor', function () { pm.expect(String(response.ownerId)).to.eql(pm.collectionVariables.get('driverId')); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Publicaciones",
+      "item": [
+        {
+          "name": "Listar publicaciones publicas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/publications"
+          }
+        },
+        {
+          "name": "Crear publicacion como conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fromUTEC\": true,\n  \"driverToPassenger\": true,\n  \"seats\": 3,\n  \"titulo\": \"Salida desde UTEC hacia Miraflores\",\n  \"descripcion\": \"Prueba de flujo Postman\",\n  \"destinationOrOrigin\": \"Parque Kennedy, Miraflores\",\n  \"departureTime\": \"2026-05-20T18:00:00\",\n  \"vehicleId\": {{vehicleId}}\n}"
+            },
+            "url": "{{baseUrl}}/api/publications",
+            "description": "La fecha pasada facilita probar reviews despues de aceptar. Para un uso real cree viajes futuros."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Publicacion de conductor creada', function () { pm.response.to.have.status(201); });",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('publicationId', response.id);",
+                  "pm.test('Vehiculo seleccionado conservado', function () { pm.expect(String(response.vehicleId)).to.eql(pm.collectionVariables.get('vehicleId')); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Solicitud Y Aceptacion",
+      "item": [
+        {
+          "name": "Pasajero solicita publicacion del conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{passengerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requesterIsDriver\": false,\n  \"seats\": 1,\n  \"message\": \"Tengo clases hasta las 6, puedo unirme?\",\n  \"pickupPointOrDestine\": \"Av. Larco 200, Miraflores\"\n}"
+            },
+            "url": "{{baseUrl}}/api/publications/{{publicationId}}/requests",
+            "description": "No contiene requesterId: el requester se obtiene del JWT del pasajero."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Solicitud creada', function () { pm.response.to.have.status(201); });",
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('requestId', response.id);",
+                  "pm.test('Solicitud inicia PENDING', function () { pm.expect(response.status).to.eql('PENDING'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conductor lista solicitudes recibidas",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/publications/{{publicationId}}/requests"
+          }
+        },
+        {
+          "name": "Conductor acepta solicitud",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleId\": {{vehicleId}}\n}"
+            },
+            "url": "{{baseUrl}}/api/request-publications/{{requestId}}/accept",
+            "description": "Accept crea el Ride y RidePassenger; no use endpoints POST manuales."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Solicitud aceptada', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Estado ACCEPTED', function () { pm.expect(pm.response.json().status).to.eql('ACCEPTED'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Viaje Confirmado Y Reviews",
+      "item": [
+        {
+          "name": "Listar rides y guardar ride creado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/rides"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Rides requieren JWT y responden OK', function () { pm.response.to.have.status(200); });",
+                  "const rides = pm.response.json();",
+                  "const ride = rides.find(item => String(item.publicationId) === pm.collectionVariables.get('publicationId'));",
+                  "pm.test('Se creo ride desde accept', function () { pm.expect(ride).to.exist; });",
+                  "if (ride) { pm.collectionVariables.set('rideId', ride.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar pasajeros confirmados",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/ride-passengers"
+          }
+        },
+        {
+          "name": "Pasajero califica al conductor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{passengerToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rideId\": {{rideId}},\n  \"reviewedId\": {{driverId}},\n  \"rating\": 5,\n  \"comment\": \"Viaje puntual y seguro\"\n}"
+            },
+            "url": "{{baseUrl}}/api/reviews",
+            "description": "No contiene reviewerId: el reviewer se obtiene del JWT. Solo funciona si la hora del viaje ya paso."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Review creada por participante autenticado', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conductor consulta rating recalculado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/me"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Perfil devuelve rating calculado', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().rating).to.eql(5);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Controles De Seguridad",
+      "item": [
+        {
+          "name": "GET vehicles sin token devuelve 401",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/vehicles"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Datos sensibles protegidos', function () { pm.response.to.have.status(401); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST rides manual no permitido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{baseUrl}}/api/rides"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Ride solo se crea desde accept', function () { pm.response.to.have.status(405); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST ride-passengers manual no permitido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{driverToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{baseUrl}}/api/ride-passengers"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pasajero confirmado solo se crea desde accept', function () { pm.response.to.have.status(405); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

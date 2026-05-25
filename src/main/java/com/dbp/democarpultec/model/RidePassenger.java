@@ -28,13 +28,13 @@ public class RidePassenger {
 
     // Usuario que fue pasajero en el ride
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "passenger_id", nullable = false)
     private User passenger;
 
     // Ride al que pertenece este pasajero
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "ride_id", nullable = false)
     private Ride ride;
 

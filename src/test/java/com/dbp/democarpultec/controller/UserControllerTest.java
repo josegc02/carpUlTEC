@@ -3,11 +3,13 @@ package com.dbp.democarpultec.controller;
 import com.dbp.democarpultec.dto.UserRequestDto;
 import com.dbp.democarpultec.dto.UserResponseDto;
 import com.dbp.democarpultec.model.enums.Carreras;
+import com.dbp.democarpultec.service.AuthService;
 import com.dbp.democarpultec.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -22,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -31,6 +34,9 @@ public class UserControllerTest {
 
     @MockitoBean
     private UserService userService;
+
+    @MockitoBean
+    private AuthService authService;
 
     private UserResponseDto buildResponse(){
         return UserResponseDto.builder()
@@ -55,7 +61,6 @@ public class UserControllerTest {
                 .studentCode("U202410032")
                 .career(Carreras.Ciencia_de_la_Computacion)
                 .cycle(6)
-                .rating(4.5)
                 .build();
     }
 
@@ -150,7 +155,6 @@ public class UserControllerTest {
                 .name("Pedro")
                 .lastName("Lopez")
                 .email("pedro@test.com")
-                .rating(4.0)
                 .build();
 
         mockMvc.perform(put("/api/users/1")
@@ -191,5 +195,18 @@ public class UserControllerTest {
                 .andExpect(status().isNotFound());
 
         verify(userService).delete(99L);
+    }
+
+    @Test
+    void shouldReturnAuthenticatedUserWhenTokenIsValid() throws Exception {
+        when(authService.getCurrentUserByEmail("juan@test.com")).thenReturn(buildResponse());
+
+        mockMvc.perform(get("/api/users/me")
+                        .principal(() -> "juan@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("juan@test.com"));
+
+        verify(authService).getCurrentUserByEmail("juan@test.com");
     }
 }

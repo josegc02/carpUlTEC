@@ -1,6 +1,7 @@
 package com.dbp.democarpultec.dto;
 
 import com.dbp.democarpultec.model.enums.Carreras;
+import com.dbp.democarpultec.model.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,4 +22,5 @@ public class UserResponseDto {
     private Carreras career;
     private Integer cycle;
     private Double rating;
+    private Role role;
 }

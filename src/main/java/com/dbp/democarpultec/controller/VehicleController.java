@@ -2,6 +2,8 @@ package com.dbp.democarpultec.controller;
 
 import com.dbp.democarpultec.dto.VehicleRequestDto;
 import com.dbp.democarpultec.dto.VehicleResponseDto;
+import com.dbp.democarpultec.dto.UserResponseDto;
+import com.dbp.democarpultec.service.AuthService;
 import com.dbp.democarpultec.service.VehicleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -17,6 +20,7 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final AuthService authService;
 
     @GetMapping
     public List<VehicleResponseDto> findAll() {
@@ -29,18 +33,29 @@ public class VehicleController {
     }
 
     @PostMapping
-    public ResponseEntity<VehicleResponseDto> create(@Valid @RequestBody VehicleRequestDto vehicle) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(vehicleService.create(vehicle));
+    public ResponseEntity<VehicleResponseDto> create(
+            Principal principal,
+            @Valid @RequestBody VehicleRequestDto vehicle
+    ) {
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(vehicleService.createAuthenticated(currentUser.getId(), vehicle));
     }
 
     @PutMapping("/{id}")
-    public VehicleResponseDto update(@PathVariable Long id, @Valid @RequestBody VehicleRequestDto vehicle) {
-        return vehicleService.update(id, vehicle);
+    public VehicleResponseDto update(
+            Principal principal,
+            @PathVariable Long id,
+            @Valid @RequestBody VehicleRequestDto vehicle
+    ) {
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
+        return vehicleService.updateAuthenticated(id, currentUser.getId(), vehicle);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        vehicleService.delete(id);
+    public ResponseEntity<Void> delete(Principal principal, @PathVariable Long id) {
+        UserResponseDto currentUser = authService.getCurrentUserByEmail(principal.getName());
+        vehicleService.deleteAuthenticated(id, currentUser.getId());
         return ResponseEntity.noContent().build();
     }
 }

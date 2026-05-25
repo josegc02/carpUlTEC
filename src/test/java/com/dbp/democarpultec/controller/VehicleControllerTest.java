@@ -2,11 +2,15 @@ package com.dbp.democarpultec.controller;
 
 import com.dbp.democarpultec.dto.VehicleRequestDto;
 import com.dbp.democarpultec.dto.VehicleResponseDto;
+import com.dbp.democarpultec.dto.UserResponseDto;
+import com.dbp.democarpultec.service.AuthService;
 import com.dbp.democarpultec.service.VehicleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -21,6 +25,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(VehicleController.class)
+@AutoConfigureMockMvc(addFilters = false)
 public class VehicleControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -30,6 +35,15 @@ public class VehicleControllerTest {
 
     @MockitoBean
     private VehicleService vehicleService;
+
+    @MockitoBean
+    private AuthService authService;
+
+    @BeforeEach
+    void setUp() {
+        when(authService.getCurrentUserByEmail("juan@utec.edu.pe"))
+                .thenReturn(UserResponseDto.builder().id(1L).build());
+    }
 
     private VehicleResponseDto buildResponse() {
         return VehicleResponseDto.builder()
@@ -45,7 +59,6 @@ public class VehicleControllerTest {
 
     private VehicleRequestDto buildRequest() {
         return VehicleRequestDto.builder()
-                .ownerId(1L)
                 .plate("ABC-123")
                 .brand("Toyota")
                 .model("Corolla")
@@ -101,9 +114,10 @@ public class VehicleControllerTest {
 
     @Test
     void shouldCreateVehicleWhenValidRequest() throws Exception {
-        when(vehicleService.create(any(VehicleRequestDto.class))).thenReturn(buildResponse());
+        when(vehicleService.createAuthenticated(eq(1L), any(VehicleRequestDto.class))).thenReturn(buildResponse());
 
         mockMvc.perform(post("/api/vehicles")
+                        .principal(() -> "juan@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(buildRequest())))
                 .andExpect(status().isCreated())
@@ -111,7 +125,7 @@ public class VehicleControllerTest {
                 .andExpect(jsonPath("$.plate").value("ABC-123"))
                 .andExpect(jsonPath("$.ownerId").value(1));
 
-        verify(vehicleService).create(any(VehicleRequestDto.class));
+        verify(vehicleService).createAuthenticated(eq(1L), any(VehicleRequestDto.class));
     }
 
     @Test
@@ -124,11 +138,12 @@ public class VehicleControllerTest {
                 .build();
 
         mockMvc.perform(post("/api/vehicles")
+                        .principal(() -> "juan@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalid)))
                 .andExpect(status().isBadRequest());
 
-        verify(vehicleService, never()).create(any());
+        verify(vehicleService, never()).createAuthenticated(anyLong(), any());
     }
 
     @Test
@@ -143,10 +158,9 @@ public class VehicleControllerTest {
                 .seats(5)
                 .build();
 
-        when(vehicleService.update(eq(1L), any(VehicleRequestDto.class))).thenReturn(updated);
+        when(vehicleService.updateAuthenticated(eq(1L), eq(1L), any(VehicleRequestDto.class))).thenReturn(updated);
 
         VehicleRequestDto req = VehicleRequestDto.builder()
-                .ownerId(1L)
                 .plate("XYZ-999")
                 .brand("Honda")
                 .model("Civic")
@@ -155,44 +169,48 @@ public class VehicleControllerTest {
                 .build();
 
         mockMvc.perform(put("/api/vehicles/1")
+                        .principal(() -> "juan@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.plate").value("XYZ-999"))
                 .andExpect(jsonPath("$.brand").value("Honda"));
 
-        verify(vehicleService).update(eq(1L), any(VehicleRequestDto.class));
+        verify(vehicleService).updateAuthenticated(eq(1L), eq(1L), any(VehicleRequestDto.class));
     }
 
     @Test
     void shouldReturn404WhenUpdatingNonExistentVehicle() throws Exception {
-        when(vehicleService.update(eq(99L), any(VehicleRequestDto.class))).thenThrow(new EntityNotFoundException("Vehicle not found with id 99"));
+        when(vehicleService.updateAuthenticated(eq(99L), eq(1L), any(VehicleRequestDto.class))).thenThrow(new EntityNotFoundException("Vehicle not found with id 99"));
 
         mockMvc.perform(put("/api/vehicles/99")
+                        .principal(() -> "juan@utec.edu.pe")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(buildRequest())))
                 .andExpect(status().isNotFound());
 
-        verify(vehicleService).update(eq(99L), any(VehicleRequestDto.class));
+        verify(vehicleService).updateAuthenticated(eq(99L), eq(1L), any(VehicleRequestDto.class));
     }
 
     @Test
     void shouldDeleteVehicleWhenIdExists() throws Exception {
-        doNothing().when(vehicleService).delete(1L);
+        doNothing().when(vehicleService).deleteAuthenticated(1L, 1L);
 
-        mockMvc.perform(delete("/api/vehicles/1"))
+        mockMvc.perform(delete("/api/vehicles/1")
+                        .principal(() -> "juan@utec.edu.pe"))
                 .andExpect(status().isNoContent());
 
-        verify(vehicleService).delete(1L);
+        verify(vehicleService).deleteAuthenticated(1L, 1L);
     }
 
     @Test
     void shouldReturn404WhenDeletingNonExistentVehicle() throws Exception {
-        doThrow(new EntityNotFoundException("Vehicle not found with id 99")).when(vehicleService).delete(99L);
+        doThrow(new EntityNotFoundException("Vehicle not found with id 99")).when(vehicleService).deleteAuthenticated(99L, 1L);
 
-        mockMvc.perform(delete("/api/vehicles/99"))
+        mockMvc.perform(delete("/api/vehicles/99")
+                        .principal(() -> "juan@utec.edu.pe"))
                 .andExpect(status().isNotFound());
 
-        verify(vehicleService).delete(99L);
+        verify(vehicleService).deleteAuthenticated(99L, 1L);
     }
 }
