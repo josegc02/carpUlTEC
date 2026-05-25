@@ -2,6 +2,9 @@ package com.dbp.democarpultec.service;
 
 import com.dbp.democarpultec.dto.VehicleRequestDto;
 import com.dbp.democarpultec.dto.VehicleResponseDto;
+import com.dbp.democarpultec.exception.BusinessRuleException;
+import com.dbp.democarpultec.exception.ForbiddenException;
+import com.dbp.democarpultec.model.User;
 import com.dbp.democarpultec.model.Vehicle;
 import com.dbp.democarpultec.repository.VehicleRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -13,6 +16,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class VehicleService {
+    private static final int MAX_VEHICLES_PER_USER = 2;
 
     private final VehicleRepository vehicleRepository;
     private final UserService userService;
@@ -25,22 +29,28 @@ public class VehicleService {
         return toResponseDto(findEntityById(id));
     }
 
-    public VehicleResponseDto create(VehicleRequestDto dto) {
-        Vehicle vehicle = new Vehicle();
-        updateEntity(vehicle, dto);
-        return toResponseDto(vehicleRepository.save(vehicle));
-    }
-
-    public VehicleResponseDto update(Long id, VehicleRequestDto dto) {
-        Vehicle vehicle = findEntityById(id);
-        updateEntity(vehicle, dto);
-        return toResponseDto(vehicleRepository.save(vehicle));
-    }
-
-    public void delete(Long id) {
-        if (!vehicleRepository.existsById(id)) {
-            throw new EntityNotFoundException("Vehicle not found with id " + id);
+    public VehicleResponseDto createAuthenticated(Long authenticatedUserId, VehicleRequestDto dto) {
+        if (vehicleRepository.countByOwner_Id(authenticatedUserId) >= MAX_VEHICLES_PER_USER) {
+            throw new BusinessRuleException("A user can register up to 2 vehicles");
         }
+
+        User owner = userService.findEntityById(authenticatedUserId);
+        Vehicle vehicle = new Vehicle();
+        vehicle.setOwner(owner);
+        updateEntityData(vehicle, dto);
+        return toResponseDto(vehicleRepository.save(vehicle));
+    }
+
+    public VehicleResponseDto updateAuthenticated(Long id, Long authenticatedUserId, VehicleRequestDto dto) {
+        Vehicle vehicle = findEntityById(id);
+        validateOwnership(vehicle, authenticatedUserId);
+        updateEntityData(vehicle, dto);
+        return toResponseDto(vehicleRepository.save(vehicle));
+    }
+
+    public void deleteAuthenticated(Long id, Long authenticatedUserId) {
+        Vehicle vehicle = findEntityById(id);
+        validateOwnership(vehicle, authenticatedUserId);
         vehicleRepository.deleteById(id);
     }
 
@@ -49,13 +59,28 @@ public class VehicleService {
                 .orElseThrow(() -> new EntityNotFoundException("Vehicle not found with id " + id));
     }
 
-    private void updateEntity(Vehicle vehicle, VehicleRequestDto dto) {
-        vehicle.setOwner(userService.findEntityById(dto.getOwnerId()));
+    public Vehicle findOwnedVehicleById(Long vehicleId, Long ownerId) {
+        Vehicle vehicle = findEntityById(vehicleId);
+        validateOwnership(vehicle, ownerId);
+        return vehicle;
+    }
+
+    public boolean userHasVehicle(Long ownerId) {
+        return vehicleRepository.existsByOwner_Id(ownerId);
+    }
+
+    private void updateEntityData(Vehicle vehicle, VehicleRequestDto dto) {
         vehicle.setPlate(dto.getPlate());
         vehicle.setBrand(dto.getBrand());
         vehicle.setModel(dto.getModel());
         vehicle.setColor(dto.getColor());
         vehicle.setSeats(dto.getSeats());
+    }
+
+    private void validateOwnership(Vehicle vehicle, Long authenticatedUserId) {
+        if (!vehicle.getOwner().getId().equals(authenticatedUserId)) {
+            throw new ForbiddenException("You are not the owner of this vehicle");
+        }
     }
 
     private VehicleResponseDto toResponseDto(Vehicle vehicle) {

@@ -3,7 +3,6 @@ package com.dbp.democarpultec.dto;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,10 +14,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class VehicleRequestDto {
-
-    @NotNull
-    @Positive
-    private Long ownerId;
 
     @NotBlank
     @Size(max = 12)

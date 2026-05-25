@@ -57,6 +57,7 @@ public class RequestPublicationService {
         Long publicationId = requirePublicationId(dto);
         Publication publication = publicationService.findEntityById(publicationId);
         validateCreateBusinessRules(publication, authenticatedUserId, dto);
+        validateDriverHasVehicle(authenticatedUserId, dto.getRequesterIsDriver());
 
         RequestPublication request = new RequestPublication();
         request.setRequester(userService.findEntityById(authenticatedUserId));
@@ -73,8 +74,10 @@ public class RequestPublicationService {
     public RequestPublicationResponseDto updateAuthenticated(Long id, Long authenticatedUserId, RequestPublicationRequestDto dto) {
         RequestPublication request = findEntityById(id);
         validateRequesterOwnership(request, authenticatedUserId);
-        Long publicationId = requirePublicationId(dto);
-        updateEntityData(request, publicationService.findEntityById(publicationId), dto);
+        ensurePendingStatus(request);
+        validateImmutableRequestData(request, dto);
+        validateDriverHasVehicle(authenticatedUserId, dto.getRequesterIsDriver());
+        updateEditableData(request, dto);
         return toResponseDto(requestPublicationRepository.save(request));
     }
 
@@ -146,12 +149,13 @@ public class RequestPublicationService {
         User driver = resolveDriver(publication, request);
         User passenger = resolvePassenger(publication, request);
 
-        Vehicle vehicle = vehicleService.findEntityById(vehicleId);
+        Vehicle vehicle = resolveVehicleForAcceptedRequest(publication, vehicleId);
         validateVehicleOwnership(vehicle, driver);
 
         Ride existingRide = rideRepository.findByPublication_Id(publication.getId()).orElse(null);
 
         if (publication.getDriverToPassenger()) {
+            validateDriverPublicationCapacity(publication, vehicle);
             Ride ride = existingRide != null
                     ? existingRide
                     : rideRepository.save(createRide(publication, driver, vehicle));
@@ -165,6 +169,7 @@ public class RequestPublicationService {
                 throw new BusinessRuleException("A driver has already been accepted for this passenger publication");
             }
 
+            validatePassengerPublicationCapacity(publication, request, vehicle);
             Ride ride = rideRepository.save(createRide(publication, driver, vehicle));
             addPassengerToRide(ride, passenger, publication.getSeats(), request.getPickupPointOrDestine());
             rideRepository.save(ride);
@@ -204,6 +209,25 @@ public class RequestPublicationService {
         request.setExternalLongitude(longitude);
     }
 
+    private void updateEditableData(RequestPublication request, RequestPublicationRequestDto dto) {
+        Double latitude = dto.getExternalLatitude();
+        Double longitude = dto.getExternalLongitude();
+        validateCoordinatePair(latitude, longitude, "request publication");
+        if (latitude == null && longitude == null) {
+            GoogleMapsService.Coordinates coordinates = geoService.geocode(dto.getPickupPointOrDestine());
+            if (coordinates != null) {
+                latitude = coordinates.latitude();
+                longitude = coordinates.longitude();
+            }
+        }
+
+        request.setSeats(dto.getSeats());
+        request.setMessage(dto.getMessage());
+        request.setPickupPointOrDestine(dto.getPickupPointOrDestine());
+        request.setExternalLatitude(latitude);
+        request.setExternalLongitude(longitude);
+    }
+
     private void validateRequesterOwnership(RequestPublication request, Long authenticatedUserId) {
         if (!request.getRequester().getId().equals(authenticatedUserId)) {
             throw new ForbiddenException("You are not the owner of this request publication");
@@ -236,6 +260,22 @@ public class RequestPublicationService {
         );
         if (hasActiveRequest) {
             throw new DuplicateResourceException("Requester already has an active request for this publication");
+        }
+    }
+
+    private void validateImmutableRequestData(RequestPublication request, RequestPublicationRequestDto dto) {
+        Long publicationId = requirePublicationId(dto);
+        if (!request.getPublication().getId().equals(publicationId)) {
+            throw new BusinessRuleException("A request cannot change publication");
+        }
+        if (!request.getRequesterIsDriver().equals(dto.getRequesterIsDriver())) {
+            throw new BusinessRuleException("A request cannot change requester role");
+        }
+    }
+
+    private void validateDriverHasVehicle(Long requesterId, Boolean requesterIsDriver) {
+        if (Boolean.TRUE.equals(requesterIsDriver) && !vehicleService.userHasVehicle(requesterId)) {
+            throw new BusinessRuleException("A driver must register a vehicle before requesting a ride");
         }
     }
 
@@ -287,6 +327,38 @@ public class RequestPublicationService {
     private void validateVehicleOwnership(Vehicle vehicle, User driver) {
         if (!vehicle.getOwner().getId().equals(driver.getId())) {
             throw new BusinessRuleException("Vehicle must belong to the real driver");
+        }
+    }
+
+    private Vehicle resolveVehicleForAcceptedRequest(Publication publication, Long vehicleId) {
+        if (Boolean.TRUE.equals(publication.getDriverToPassenger())) {
+            if (publication.getVehicle() == null) {
+                throw new BusinessRuleException("Driver publication has no selected vehicle");
+            }
+            if (!publication.getVehicle().getId().equals(vehicleId)) {
+                throw new BusinessRuleException("Acceptance must use the vehicle selected in the publication");
+            }
+            return publication.getVehicle();
+        }
+        return vehicleService.findEntityById(vehicleId);
+    }
+
+    private void validateDriverPublicationCapacity(Publication publication, Vehicle vehicle) {
+        if (publication.getSeats() > vehicle.getSeats()) {
+            throw new BusinessRuleException("Offered seats cannot exceed vehicle capacity");
+        }
+    }
+
+    private void validatePassengerPublicationCapacity(
+            Publication publication,
+            RequestPublication request,
+            Vehicle vehicle
+    ) {
+        if (request.getSeats() < publication.getSeats()) {
+            throw new BusinessRuleException("Driver does not offer enough seats for this passenger request");
+        }
+        if (vehicle.getSeats() < publication.getSeats()) {
+            throw new BusinessRuleException("Vehicle does not have enough seats for this passenger request");
         }
     }
 

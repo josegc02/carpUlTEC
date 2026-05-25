@@ -1,8 +1,6 @@
 package com.dbp.democarpultec.dto;
 
 import com.dbp.democarpultec.model.enums.Carreras;
-import jakarta.validation.constraints.DecimalMax;
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -44,7 +42,4 @@ public class UserRequestDto {
     @Max(12)
     private Integer cycle;
 
-    @DecimalMin("0.0")
-    @DecimalMax("5.0")
-    private Double rating;
 }

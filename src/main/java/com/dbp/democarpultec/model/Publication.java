@@ -58,6 +58,11 @@ public class Publication {
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
 
+    // Vehiculo elegido si el autor publica como conductor.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehicle_id")
+    private Vehicle vehicle;
+
     // Una publicación puede tener muchas solicitudes
     @Builder.Default
     @OneToMany(mappedBy = "publication", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)

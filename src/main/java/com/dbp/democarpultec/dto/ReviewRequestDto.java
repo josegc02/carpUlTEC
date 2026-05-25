@@ -22,10 +22,6 @@ public class ReviewRequestDto {
 
     @NotNull
     @Positive
-    private Long reviewerId;
-
-    @NotNull
-    @Positive
     private Long reviewedId;
 
     @NotNull

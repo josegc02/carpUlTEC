@@ -16,6 +16,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -59,6 +61,19 @@ class SecurityIntegrationTest extends PostgresContainerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.path").value("/api/users/me"));
+    }
+
+    @Test
+    void shouldRequireAuthenticationForSensitiveReadEndpoints() throws Exception {
+        for (String endpoint : List.of(
+                "/api/vehicles",
+                "/api/request-publications",
+                "/api/rides",
+                "/api/ride-passengers",
+                "/api/reviews")) {
+            mockMvc.perform(get(endpoint))
+                    .andExpect(status().isUnauthorized());
+        }
     }
 
     @Test

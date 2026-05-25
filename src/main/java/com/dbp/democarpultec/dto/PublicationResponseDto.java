@@ -25,5 +25,6 @@ public class PublicationResponseDto {
     private Double distanceToUtecKm;
     private LocalDateTime departureTime;
     private Long authorId;
+    private Long vehicleId;
     private Long rideId;
 }

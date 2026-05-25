@@ -5,6 +5,8 @@ import com.dbp.democarpultec.dto.PublicationResponseDto;
 import com.dbp.democarpultec.exception.BusinessRuleException;
 import com.dbp.democarpultec.exception.ForbiddenException;
 import com.dbp.democarpultec.model.Publication;
+import com.dbp.democarpultec.model.User;
+import com.dbp.democarpultec.model.Vehicle;
 import com.dbp.democarpultec.repository.PublicationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ public class PublicationService {
 
     private final PublicationRepository publicationRepository;
     private final UserService userService;
+    private final VehicleService vehicleService;
     private final GeoService geoService;
 
     public List<PublicationResponseDto> findAll() {
@@ -36,8 +39,9 @@ public class PublicationService {
 
     public PublicationResponseDto createAuthenticated(Long authenticatedUserId, PublicationRequestDto dto) {
         Publication publication = new Publication();
-        publication.setAuthor(userService.findEntityById(authenticatedUserId));
-        updateEntityData(publication, dto);
+        User author = userService.findEntityById(authenticatedUserId);
+        publication.setAuthor(author);
+        updateEntityData(publication, dto, author);
         return toResponseDto(publicationRepository.save(publication));
     }
 
@@ -50,7 +54,7 @@ public class PublicationService {
     public PublicationResponseDto updateAuthenticated(Long id, Long authenticatedUserId, PublicationRequestDto dto) {
         Publication publication = findEntityById(id);
         validateAuthorOwnership(publication, authenticatedUserId);
-        updateEntityData(publication, dto);
+        updateEntityData(publication, dto, publication.getAuthor());
         return toResponseDto(publicationRepository.save(publication));
     }
 
@@ -73,11 +77,12 @@ public class PublicationService {
     }
 
     private void updateEntity(Publication publication, PublicationRequestDto dto) {
-        updateEntityData(publication, dto);
-        publication.setAuthor(userService.findEntityById(dto.getAuthorId()));
+        User author = userService.findEntityById(dto.getAuthorId());
+        publication.setAuthor(author);
+        updateEntityData(publication, dto, author);
     }
 
-    private void updateEntityData(Publication publication, PublicationRequestDto dto) {
+    private void updateEntityData(Publication publication, PublicationRequestDto dto, User author) {
         Double latitude = dto.getExternalLatitude();
         Double longitude = dto.getExternalLongitude();
         validateCoordinatePair(latitude, longitude, "publication");
@@ -98,6 +103,26 @@ public class PublicationService {
         publication.setExternalLatitude(latitude);
         publication.setExternalLongitude(longitude);
         publication.setDepartureTime(dto.getDepartureTime());
+        assignVehicleWhenDriverPublication(publication, dto, author);
+    }
+
+    private void assignVehicleWhenDriverPublication(Publication publication, PublicationRequestDto dto, User author) {
+        if (Boolean.TRUE.equals(dto.getDriverToPassenger())) {
+            if (dto.getVehicleId() == null) {
+                throw new BusinessRuleException("A driver publication requires a vehicle");
+            }
+            Vehicle vehicle = vehicleService.findOwnedVehicleById(dto.getVehicleId(), author.getId());
+            if (dto.getSeats() > vehicle.getSeats()) {
+                throw new BusinessRuleException("Offered seats cannot exceed vehicle capacity");
+            }
+            publication.setVehicle(vehicle);
+            return;
+        }
+
+        if (dto.getVehicleId() != null) {
+            throw new BusinessRuleException("A passenger publication cannot select a vehicle");
+        }
+        publication.setVehicle(null);
     }
 
     private void validateAuthorOwnership(Publication publication, Long authenticatedUserId) {
@@ -123,6 +148,7 @@ public class PublicationService {
                 ))
                 .departureTime(publication.getDepartureTime())
                 .authorId(publication.getAuthor().getId())
+                .vehicleId(publication.getVehicle() == null ? null : publication.getVehicle().getId())
                 .rideId(publication.getRide() == null ? null : publication.getRide().getId())
                 .build();
     }

@@ -51,5 +51,7 @@ public class PublicationRequestDto {
     @NotNull
     private LocalDateTime departureTime;
 
+    private Long vehicleId;
+
     private Long authorId;
 }

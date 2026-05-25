@@ -61,7 +61,6 @@ public class UserControllerTest {
                 .studentCode("U202410032")
                 .career(Carreras.Ciencia_de_la_Computacion)
                 .cycle(6)
-                .rating(4.5)
                 .build();
     }
 
@@ -156,7 +155,6 @@ public class UserControllerTest {
                 .name("Pedro")
                 .lastName("Lopez")
                 .email("pedro@test.com")
-                .rating(4.0)
                 .build();
 
         mockMvc.perform(put("/api/users/1")

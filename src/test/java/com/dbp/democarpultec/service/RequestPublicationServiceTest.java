@@ -534,9 +534,10 @@ public class RequestPublicationServiceTest {
         Vehicle vehicle = new Vehicle();
         vehicle.setId(7L);
         vehicle.setOwner(authorDriver);
+        vehicle.setSeats(4);
+        publication.setVehicle(vehicle);
 
         when(requestPublicationRepository.findById(20L)).thenReturn(Optional.of(request));
-        when(vehicleService.findEntityById(7L)).thenReturn(vehicle);
         when(rideRepository.findByPublication_Id(10L)).thenReturn(Optional.empty());
         when(rideRepository.save(any(Ride.class))).thenAnswer(invocation -> {
             Ride ride = invocation.getArgument(0);
@@ -583,9 +584,10 @@ public class RequestPublicationServiceTest {
         Vehicle vehicle = new Vehicle();
         vehicle.setId(7L);
         vehicle.setOwner(anotherOwner);
+        vehicle.setSeats(4);
+        publication.setVehicle(vehicle);
 
         when(requestPublicationRepository.findById(20L)).thenReturn(Optional.of(request));
-        when(vehicleService.findEntityById(7L)).thenReturn(vehicle);
 
         assertThrows(BusinessRuleException.class, () -> requestPublicationService.accept(20L, 1L, 7L));
         verify(requestPublicationRepository, never()).save(any());
@@ -615,6 +617,8 @@ public class RequestPublicationServiceTest {
         Vehicle vehicle = new Vehicle();
         vehicle.setId(7L);
         vehicle.setOwner(authorDriver);
+        vehicle.setSeats(4);
+        publication.setVehicle(vehicle);
 
         Ride existingRide = new Ride();
         existingRide.setId(100L);
@@ -623,7 +627,6 @@ public class RequestPublicationServiceTest {
         existingRide.setVehicle(vehicle);
 
         when(requestPublicationRepository.findById(20L)).thenReturn(Optional.of(request));
-        when(vehicleService.findEntityById(7L)).thenReturn(vehicle);
         when(rideRepository.findByPublication_Id(10L)).thenReturn(Optional.of(existingRide));
         when(ridePassengerRepository.sumSeatsReservedByRide_Id(100L)).thenReturn(2);
 
@@ -666,6 +669,7 @@ public class RequestPublicationServiceTest {
         Vehicle vehicle = new Vehicle();
         vehicle.setId(7L);
         vehicle.setOwner(requesterDriver);
+        vehicle.setSeats(4);
 
         when(requestPublicationRepository.findById(20L)).thenReturn(Optional.of(acceptedRequest));
         when(vehicleService.findEntityById(7L)).thenReturn(vehicle);
@@ -689,5 +693,102 @@ public class RequestPublicationServiceTest {
         assertEquals(Status.ACCEPTED, result.getStatus());
         assertEquals(Status.REJECTED, anotherPending.getStatus());
         verify(applicationEventPublisher, times(2)).publishEvent(any(RequestStatusChangedEvent.class));
+    }
+
+    @Test
+    void shouldRejectDriverRequestWhenRequesterHasNoVehicle() {
+        User passengerAuthor = new User();
+        passengerAuthor.setId(1L);
+        Publication publication = new Publication();
+        publication.setId(10L);
+        publication.setAuthor(passengerAuthor);
+        publication.setDriverToPassenger(false);
+        RequestPublicationRequestDto dto = RequestPublicationRequestDto.builder()
+                .publicationId(10L)
+                .requesterIsDriver(true)
+                .seats(2)
+                .pickupPointOrDestine("UTEC")
+                .build();
+
+        when(publicationService.findEntityById(10L)).thenReturn(publication);
+        when(requestPublicationRepository.existsByPublication_IdAndRequester_IdAndStatusIn(eq(10L), eq(2L), any()))
+                .thenReturn(false);
+
+        assertThrows(BusinessRuleException.class, () -> requestPublicationService.createAuthenticated(2L, dto));
+        verify(requestPublicationRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectUpdateWhenRequestIsNoLongerPending() {
+        User requester = new User();
+        requester.setId(2L);
+        RequestPublication request = new RequestPublication();
+        request.setId(5L);
+        request.setRequester(requester);
+        request.setStatus(Status.ACCEPTED);
+        when(requestPublicationRepository.findById(5L)).thenReturn(Optional.of(request));
+
+        RequestPublicationRequestDto dto = RequestPublicationRequestDto.builder()
+                .publicationId(10L)
+                .requesterIsDriver(false)
+                .seats(1)
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> requestPublicationService.updateAuthenticated(5L, 2L, dto));
+        verify(requestPublicationRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectUpdateThatChangesPublication() {
+        User requester = new User();
+        requester.setId(2L);
+        Publication publication = new Publication();
+        publication.setId(10L);
+        RequestPublication request = new RequestPublication();
+        request.setId(5L);
+        request.setRequester(requester);
+        request.setPublication(publication);
+        request.setRequesterIsDriver(false);
+        request.setStatus(Status.PENDING);
+        when(requestPublicationRepository.findById(5L)).thenReturn(Optional.of(request));
+
+        RequestPublicationRequestDto dto = RequestPublicationRequestDto.builder()
+                .publicationId(11L)
+                .requesterIsDriver(false)
+                .seats(1)
+                .build();
+
+        assertThrows(BusinessRuleException.class, () -> requestPublicationService.updateAuthenticated(5L, 2L, dto));
+        verify(requestPublicationRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldRejectDriverOfferThatDoesNotCoverPassengerSeats() {
+        User passenger = new User();
+        passenger.setId(1L);
+        User driver = new User();
+        driver.setId(2L);
+        Publication publication = new Publication();
+        publication.setId(10L);
+        publication.setAuthor(passenger);
+        publication.setDriverToPassenger(false);
+        publication.setSeats(3);
+        RequestPublication request = new RequestPublication();
+        request.setId(20L);
+        request.setPublication(publication);
+        request.setRequester(driver);
+        request.setRequesterIsDriver(true);
+        request.setSeats(2);
+        request.setStatus(Status.PENDING);
+        Vehicle vehicle = new Vehicle();
+        vehicle.setId(7L);
+        vehicle.setOwner(driver);
+        vehicle.setSeats(4);
+
+        when(requestPublicationRepository.findById(20L)).thenReturn(Optional.of(request));
+        when(vehicleService.findEntityById(7L)).thenReturn(vehicle);
+
+        assertThrows(BusinessRuleException.class, () -> requestPublicationService.accept(20L, 1L, 7L));
+        verify(rideRepository, never()).save(any());
     }
 }

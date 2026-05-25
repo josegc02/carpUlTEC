@@ -61,7 +61,12 @@ public class UserService {
         user.setStudentCode(dto.getStudentCode());
         user.setCareer(dto.getCareer());
         user.setCycle(dto.getCycle());
-        user.setRating(dto.getRating());
+    }
+
+    public void updateRating(Long userId, Double rating) {
+        User user = findEntityById(userId);
+        user.setRating(rating);
+        userRepository.save(user);
     }
 
     private UserResponseDto toResponseDto(User user) {
