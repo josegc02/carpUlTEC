@@ -18,6 +18,10 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 20
+    concurrency:
+      group: ecs-production
+      cancel-in-progress: true
 
     steps:
     - name: Checkout code
@@ -38,7 +42,7 @@ jobs:
       id: build-image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: latest
+        IMAGE_TAG: ${{ github.sha }}
       run: |
         # Compila el contenedor usando tu Dockerfile local
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
@@ -59,4 +63,4 @@ jobs:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
-        wait-for-service-stability: true
+        wait-for-service-stability: false
