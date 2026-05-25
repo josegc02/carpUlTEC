@@ -1,15 +1,15 @@
 {
-  "family": "carpultec-api",
+  "family": "backend-task",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
   "cpu": "512",
   "memory": "1024",
-  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/carpultec-api-task-role",
+  "executionRoleArn": "arn:aws:iam::375170594920:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::375170594920:role/carpultec-api-task-role",
   "containerDefinitions": [
     {
-      "name": "carpultec-api",
-      "image": "<IMAGE_URI>",
+      "name": "backend-task",
+      "image": "375170594920.dkr.ecr.us-east-2.amazonaws.com/carpultec-api:latest",
       "essential": true,
       "portMappings": [
         {
@@ -35,22 +35,22 @@
       "secrets": [
         {
           "name": "SPRING_DATASOURCE_URL",
-          "valueFrom": "arn:aws:ssm:<AWS_REGION>:<ACCOUNT_ID>:parameter/carpultec/prod/spring-datasource-url"
+          "valueFrom": "arn:aws:ssm:us-east-2:375170594920:parameter/carpultec/prod/spring-datasource-url"
         },
         {
           "name": "SPRING_DATASOURCE_USERNAME",
-          "valueFrom": "arn:aws:ssm:<AWS_REGION>:<ACCOUNT_ID>:parameter/carpultec/prod/spring-datasource-username"
+          "valueFrom": "arn:aws:ssm:us-east-2:375170594920:parameter/carpultec/prod/spring-datasource-username"
         },
         {
           "name": "SPRING_DATASOURCE_PASSWORD",
-          "valueFrom": "arn:aws:ssm:<AWS_REGION>:<ACCOUNT_ID>:parameter/carpultec/prod/spring-datasource-password"
+          "valueFrom": "arn:aws:ssm:us-east-2:375170594920:parameter/carpultec/prod/spring-datasource-password"
         }
       ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/carpultec-api",
-          "awslogs-region": "<AWS_REGION>",
+          "awslogs-group": "/ecs/backend-task",
+          "awslogs-region": "us-east-2",
           "awslogs-stream-prefix": "ecs"
         }
       }
