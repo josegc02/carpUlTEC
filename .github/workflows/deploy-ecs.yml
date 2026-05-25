@@ -10,7 +10,7 @@ env:
   ECR_REPOSITORY: carpultec-api         # Tu repositorio en ECR
   ECS_CLUSTER: carpultec-api            # Tu clúster en ECS
   ECS_SERVICE: backend-task             # Tu servicio en ECS
-  ECS_TASK_DEFINITION: .aws/ecs-task-definition.json
+  ECS_TASK_DEFINITION: aws/ecs-task-definition.json
   CONTAINER_NAME: backend-task          # El nombre de tu contenedor en la Task Definition
 
 jobs:
